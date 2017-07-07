@@ -6,11 +6,10 @@
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
-// @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/dev/RemoveGoogleTracking.js 
-// @downloadURL    https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/dev/RemoveGoogleTracking.js
+// @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.js 
+// @downloadURL    https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.js
 // ==/UserScript==
 
-/* @include doesn't support the URL hash parameter */
 'use strict';
 
 // jump
@@ -96,27 +95,12 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// どの時点で変数宣言がとかいちいち調べるのめんどいので
 /* Return Promise when declared the variable name specified by argument */
-
-// eval
-// async function waitForDeclare(str) {
-// 	return new Promise(async function(resolve){
-// 		const propertyNames = str.split(".").map((c,i,a)=>{return a.slice(0,i+1).join(".")});
-// 		for(const propertyName of propertyNames){
-// 			while(eval(`typeof ${propertyName} === 'undefined'`)){
-// 				await sleep(200);
-// 			}
-// 		}
-// 		resolve();
-// 	});
-// }
 async function waitForDeclare(obj, propertyStr, interval=80) {
 	return new Promise(async function(resolve, reject){
 		const propertyNames = propertyStr.split(".");
 		let currObj = obj;
 		for(const propertyName of propertyNames){
-			// 遅延評価しないので、何度も書き換えられた場合に困る
 			while(!(propertyName in currObj) || currObj[propertyName] === null){
 				await sleep(interval);
 			}
@@ -314,7 +298,7 @@ function load(){
 	console.timeEnd("LOAD");
 }
 
-(async function init(){
+(function init(){
 	// hook XHR
 	const origOpen = XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(act, path) {
