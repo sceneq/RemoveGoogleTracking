@@ -32,8 +32,9 @@ const badParametersNames = [
 	,'psi'
 	,'stick'
 	,'dq'
+	,'ech'
 
-	//search
+	// image search
 	,'scroll'
 	,'vet'
 	,'yv'
@@ -41,11 +42,27 @@ const badParametersNames = [
 	,'iact'
 	,'forward'
 	,'ndsp'
-
 	,'csi'
-	//,'imgdii'
 	,'tbnid'
 	,'docid'
+	//,'imgdii'  // related images
+
+	// search form
+	,'pbx'
+	,'dpr'
+	,'pf'
+	,'gs_rn'
+	,'gs_mss'
+	,'pq'
+	,'cp'
+	,'oq'
+	,'sclient'
+	,'gs_l'
+	,'aqs'
+	//,'gs_ri'   // suggestions
+	//,'gs_id'   // suggestions
+	//,'xhr'     // suggestions at image search 
+	//,'tch'     // js flag?
 ];
 const badAttrNamesObj = {
 	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'], 
@@ -60,13 +77,17 @@ const dirtyLinkSelectors = [
 	'a.q.qs', 
 ];
 
+const badPaths = ["imgevent"];
+
 /* Compile */
 // The first paramater is probably 'q' so '?' does not consider
 const regBadParameters = new RegExp(
 	'&(?:' + badParametersNames.join('|') + ')=.*?(?=(&|$))'
 	, 'g');
+const regBadPaths = new RegExp(
+	'^\/(?:' + badPaths.join('|') + ')'
+);
 const dirtyLinkSelector = dirtyLinkSelectors.map(s=>s+":not([href=''])").join(',');
-
 
 /*
  * Functions
@@ -101,7 +122,7 @@ function sleep(ms) {
 }
 
 /* Return Promise when declared the variable name specified by argument */
-async function waitForDeclare(obj, propertyStr, interval=80) {
+async function onDeclare(obj, propertyStr, interval=80) {
 	return new Promise(async function(resolve, reject){
 		const propertyNames = propertyStr.split(".");
 		let currObj = obj;
@@ -115,7 +136,11 @@ async function waitForDeclare(obj, propertyStr, interval=80) {
 	});
 }
 
-function rewriteFunctions(prop){
+function removeDOM(node){
+	node.parentNode.removeChild(node);
+}
+
+function rewriteProperties(prop){
 	prop.forEach((table) => {
 		//const targetObject = typeof table[0] === 'function' ? table[0]() : table[0];
 		Object.defineProperty(table[0] || {}, table[1], {
@@ -131,7 +156,7 @@ function load(){
 	/* Overwrite disturbing  functions */
 	const yesman = function(){return true};
 	const tired = function(){};
-	rewriteFunctions([
+	rewriteProperties([
 		[window, "rwt", yesman],
 		[window.gbar_, 'Rm', yesman], 
 		[google, 'rll', yesman],
@@ -143,6 +168,7 @@ function load(){
 		[google, 'csiReport', yesman],
 		[google, 'report', yesman],
 		[google, 'aft', yesman],
+		[google, 'kEI', '0']
 	]);
 
 	// Do not send gen_204 flag 
@@ -176,7 +202,7 @@ function load(){
 		if(root === window.document){
 			return "body a";
 		} else if(legacy){
-			return "#cnt a";
+			return `#${root.id} a`;
 		} else {
 			return "#rcnt a";
 		}
@@ -193,18 +219,18 @@ function load(){
 		const directLinkParamName = mode === 'isch' ? "url" : 'q'
 
 		// search result
-		for(const dirtyAnchor of $$(dirtySelector)){
+		for(const searchResult of $$(dirtySelector)){
 			// remove attributes
-			badAttrNames.map((s)=>{ dirtyAnchor.removeAttribute(s); });
+			badAttrNames.map((s)=>{ searchResult.removeAttribute(s); });
 
 			// hide referrer
-			dirtyAnchor.rel = 'noreferrer';
+			searchResult.rel = 'noreferrer';
 
 			// remove google redirect link(legacy)
-			if (dirtyAnchor.hasAttribute('href') && dirtyAnchor.getAttribute('href').startsWith('/url?')){
-				dirtyAnchor.href = extractDirectLink(dirtyAnchor.href, directLinkParamName);
+			if (searchResult.hasAttribute('href') && searchResult.getAttribute('href').startsWith('/url?')){
+				searchResult.href = extractDirectLink(searchResult.href, directLinkParamName);
 			}
-			dirtyAnchor.href = dirtyAnchor.href.replace(regBadParameters, '');
+			searchResult.href = searchResult.href.replace(regBadParameters, '');
 		}
 		for(const dirtyLink of $$(dirtyLinkSelector)){
 			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
@@ -215,7 +241,7 @@ function load(){
 				// Overwrite links(desktop version only)
 				//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 				if(legacy) break;
-				waitForDeclare(google, "pmc.spop.r").then((shopObj) => {
+				onDeclare(google, "pmc.spop.r").then((shopObj) => {
 					const shopElements = $$(".pstl");
 					const shopLinks = Object.values(shopObj).map(a=>a[34][6]);
 
@@ -249,15 +275,15 @@ function load(){
 			switch(op){
 				case "IMAGELOADED":
 					nodes = nodes.filter(n => n.classList.contains("irc_bg"));
-				case "IMAGEUPDATE":
-					// Exclude DOM inserted at click
-					nodes = nodes.filter(n => n.id !== "irc_pbg");
 					break;
 				case "HDTBLOADED":
 					nodes = nodes.filter(n => n.className === "hdtb-mn-cont");
 					break;
+				case "HDTBUPDATE":
+					nodes = nodes.filter(n => n.className === "hdtb-mn-cont");
+					break;
 				case "HDTBCHANGE":
-					nodes = nodes.filter(n => n.id === "cnt")
+					nodes = nodes.filter(n => n.id === "cnt");
 					break;
 				case "PAGECHANGE":
 					nodes = nodes.filter(n => n.dataset && n.dataset.ved !== undefined);
@@ -281,34 +307,48 @@ function load(){
 		startObserve($("#search"), "PAGECHANGE", removeTracking);
 	}
 
-	if(legacy){
-		removeTracking();
-		console.timeEnd("LOAD");
-		console.warn("legacy mode");
-		return;
-	}
 
 	const initMode = getMode();
-
-	if(initMode === "isch"){ // image search
-		removeTracking();
-		startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
-			$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
-				e.__jsaction = null;
-				e.removeAttribute("jsaction");
-			});
-		});
-		startObserve($("#rg_s"), "IMAGEUPDATE", removeTracking);
-		return;
-	}
+	const confDeepObserve = {childList:true, subtree:true};
 
 	// Wait for .hdtb-mn-cont appears in the first page access
-	startObserve(nodeMain, "HDTBLOADED", ()=>{
-		pageInit();
+	startObserve(root, "HDTBLOADED", ()=>{
+		document.querySelectorAll("#tsf > input").forEach(s=>removeDOM(s));
 
-		// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
-		startObserve(nodeMain, "HDTBCHANGE", pageInit);
-	}, {childList:true, subtree:true});
+		if(legacy) return;
+
+		switch(initMode){
+			case "isch": // Image Search
+				removeTracking();
+				startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
+					$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
+						e.__jsaction = null;
+						e.removeAttribute("jsaction");
+					});
+				});
+				startObserve($("#top_nav"), "HDTBUPDATE", removeTracking, confDeepObserve);
+				break;
+			default:
+				pageInit();
+				// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
+				startObserve(root, "HDTBCHANGE", pageInit);
+				break;
+		}
+	}, confDeepObserve);
+
+	if(legacy){
+		removeTracking();
+
+		const form = document.querySelector("form"); // "form#tsf"
+		form.onsubmit = ()=>{
+			document.querySelectorAll("form input:not([name='q'])")
+				.forEach(s=>removeDOM(s));
+		};
+
+		console.warn("legacy mode");
+		console.timeEnd("LOAD");
+		return;
+	}
 
 	console.timeEnd("LOAD");
 }
@@ -317,6 +357,9 @@ function load(){
 	// hook XHR
 	const origOpen = XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(act, path) {
+		if(regBadPaths.test(path)){
+			return;
+		}
 		// take over the parameters ex:num=20
 		// path += location.search.replace(/./, ''); 
 		origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
