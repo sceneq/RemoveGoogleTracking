@@ -2,7 +2,7 @@
 // @name           remove google tracking UWAA
 // @namespace      jp.sceneq.rgtuwaaa
 // @description    remove google tracking
-// @version        0.4
+// @version        0.5
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
@@ -41,6 +41,11 @@ const badParametersNames = [
 	,'iact'
 	,'forward'
 	,'ndsp'
+
+	,'csi'
+	//,'imgdii'
+	,'tbnid'
+	,'docid'
 ];
 const badAttrNamesObj = {
 	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'], 
@@ -67,10 +72,10 @@ const dirtyLinkSelector = dirtyLinkSelectors.map(s=>s+":not([href=''])").join(',
  * Functions
  */
 /* Return 'q' parameter value */
-function extractDirectLink(str){
+function extractDirectLink(str, param){
 	//(?<=q=)(.*)(?=&)/
-	const res = /[?&]q(=([^&#]*))/.exec(str);
-	if(!res || !res[2]) return '';
+	const res = new RegExp(`[?&]${param}(=([^&#]*))`).exec(str);
+	if(!(res || res[2])) return '';
 	return decodeURIComponent(res[2]);
 }
 
@@ -185,6 +190,7 @@ function load(){
 		const mode = getMode();
 		const badAttrNames = badAttrNamesObj[mode] ?
 			badAttrNamesObj[mode] : badAttrNamesObj["default"];
+		const directLinkParamName = mode === 'isch' ? "url" : 'q'
 
 		// search result
 		for(const dirtyAnchor of $$(dirtySelector)){
@@ -196,7 +202,7 @@ function load(){
 
 			// remove google redirect link(legacy)
 			if (dirtyAnchor.hasAttribute('href') && dirtyAnchor.getAttribute('href').startsWith('/url?')){
-				dirtyAnchor.href = extractDirectLink(dirtyAnchor.href);
+				dirtyAnchor.href = extractDirectLink(dirtyAnchor.href, directLinkParamName);
 			}
 			dirtyAnchor.href = dirtyAnchor.href.replace(regBadParameters, '');
 		}
@@ -241,7 +247,9 @@ function load(){
 			//console.log("Nodes Captured By", op, nodes);
 
 			switch(op){
-				case "IMAGE":
+				case "IMAGELOADED":
+					nodes = nodes.filter(n => n.classList.contains("irc_bg"));
+				case "IMAGEUPDATE":
 					// Exclude DOM inserted at click
 					nodes = nodes.filter(n => n.id !== "irc_pbg");
 					break;
@@ -261,7 +269,7 @@ function load(){
 			if(nodes.length >= 1){
 				//console.log("Operation", op , "Fired", nodes[0])
 				func();
-				if(["HDTBLOADED"].includes(op)){
+				if(["HDTBLOADED", "IMAGELOADED"].includes(op)){
 					observer.disconnect();
 				}
 			}
@@ -281,9 +289,16 @@ function load(){
 	}
 
 	const initMode = getMode();
+
 	if(initMode === "isch"){ // image search
 		removeTracking();
-		startObserve($("#rg_s"), "IMAGE", removeTracking);
+		startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
+			$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
+				e.__jsaction = null;
+				e.removeAttribute("jsaction");
+			});
+		});
+		startObserve($("#rg_s"), "IMAGEUPDATE", removeTracking);
 		return;
 	}
 
