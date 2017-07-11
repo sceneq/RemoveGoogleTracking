@@ -63,6 +63,11 @@ const badParametersNames = [
 	//,'gs_id'   // suggestions
 	//,'xhr'     // suggestions at image search 
 	//,'tch'     // js flag?
+	
+	// mobile
+	,'gs_gbg'
+	,'gs_rn'
+	,'cp'
 ];
 const badAttrNamesObj = {
 	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'], 
@@ -168,7 +173,8 @@ function load(){
 		[google, 'csiReport', yesman],
 		[google, 'report', yesman],
 		[google, 'aft', yesman],
-		[google, 'kEI', '0']
+		[google, 'kEI', '0'],
+		[google.pmc.sb_mobh, "stok", ""],
 	]);
 
 	// Do not send gen_204 flag 
@@ -341,7 +347,7 @@ function load(){
 
 		const form = document.querySelector("form"); // "form#tsf"
 		form.onsubmit = ()=>{
-			document.querySelectorAll("form input:not([name='q'])")
+			document.querySelectorAll("form input:not([name='q']):not([name='hl'])")
 				.forEach(s=>removeDOM(s));
 		};
 
