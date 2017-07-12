@@ -18,6 +18,9 @@ if(location.pathname === '/' && location.search !== ''){
 	location.search = '';
 }
 
+const yesman = function(){return true};
+const tired = function(){};
+
 // matching tracking paramaters
 const badParametersNames = [
 	'biw'
@@ -159,21 +162,9 @@ function load(){
 	console.time("LOAD");
 
 	/* Overwrite disturbing  functions */
-	const yesman = function(){return true};
-	const tired = function(){};
 	rewriteProperties([
 		[window, "rwt", yesman],
 		[window.gbar_, 'Rm', yesman], 
-		[google, 'rll', yesman],
-		[google, 'log', yesman],
-		[google, 'logUrl', tired],
-		[google, 'getEI', yesman],
-		[google, 'getLEI', yesman],
-		[google, 'ctpacw', yesman],
-		[google, 'csiReport', yesman],
-		[google, 'report', yesman],
-		[google, 'aft', yesman],
-		[google, 'kEI', '0'],
 		[google.pmc.sb_mobh, "stok", ""],
 	]);
 
@@ -360,6 +351,24 @@ function load(){
 }
 
 (function init(){
+	console.time("init");
+
+	onDeclare(window, "google", 1).then((log)=>{
+		rewriteProperties([
+			[google, 'log', yesman],
+			[google, 'rll', yesman],
+			[google, 'logUrl', tired],
+			[google, 'getEI', yesman],
+			[google, 'getLEI', yesman],
+			[google, 'ctpacw', yesman],
+			[google, 'csiReport', yesman],
+			[google, 'report', yesman],
+			[google, 'aft', yesman],
+			[google, 'kEI', '0'],
+		]);
+		console.log("log rewrited");
+	});
+
 	// hook XHR
 	const origOpen = XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function(act, path) {
@@ -376,6 +385,8 @@ function load(){
 	noreferrerMeta.setAttribute("name", "referrer");
 	noreferrerMeta.setAttribute("content", "no-referrer");
 	document.querySelector("head").appendChild(noreferrerMeta);
+
+	console.timeEnd("init");
 })();
 
 window.addEventListener('DOMContentLoaded', load);
