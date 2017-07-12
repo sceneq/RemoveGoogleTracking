@@ -2,11 +2,11 @@
 // @name           remove google tracking UWAA
 // @namespace      jp.sceneq.rgtuwaaa
 // @description    remove google tracking
-// @version        0.5
+// @version        0.6
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
-// @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js 
+// @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
 // @downloadURL    https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
 // ==/UserScript==
 
@@ -64,25 +64,28 @@ const badParametersNames = [
 	,'aqs'
 	//,'gs_ri'   // suggestions
 	//,'gs_id'   // suggestions
-	//,'xhr'     // suggestions at image search 
+	//,'xhr'     // suggestions at image search
 	//,'tch'     // js flag?
-	
+
 	// mobile
 	,'gs_gbg'
 	,'gs_rn'
 	,'cp'
 ];
 const badAttrNamesObj = {
-	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'], 
-	search: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'], 
+	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'],
+	search: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'],
 	vid: ['onmousedown'],
-	isch: [], 
+	isch: [],
 };
 
 // From the nodes selected here, delete parameters specified by badParametersNames
 const dirtyLinkSelectors = [
 	// menu
-	'a.q.qs', 
+	'a.q.qs',
+
+	// doodle
+	'a.doodle',
 ];
 
 const badPaths = ["imgevent"];
@@ -100,11 +103,11 @@ const dirtyLinkSelector = dirtyLinkSelectors.map(s=>s+":not([href=''])").join(',
 /*
  * Functions
  */
-/* Return 'q' parameter value */
+/* Return parameter value */
 function extractDirectLink(str, param){
 	//(?<=q=)(.*)(?=&)/
 	const res = new RegExp(`[?&]${param}(=([^&#]*))`).exec(str);
-	if(!(res || res[2])) return '';
+	if(!res || !res[2]) return '';
 	return decodeURIComponent(res[2]);
 }
 
@@ -152,8 +155,8 @@ function rewriteProperties(prop){
 	prop.forEach((table) => {
 		//const targetObject = typeof table[0] === 'function' ? table[0]() : table[0];
 		Object.defineProperty(table[0] || {}, table[1], {
-			value: table[2], 
-			writable: false, 
+			value: table[2],
+			writable: false,
 		});
 	});
 }
@@ -164,11 +167,10 @@ function load(){
 	/* Overwrite disturbing  functions */
 	rewriteProperties([
 		[window, "rwt", yesman],
-		[window.gbar_, 'Rm', yesman], 
-		[google.pmc.sb_mobh, "stok", ""],
+		[window.gbar_, 'Rm', yesman],
 	]);
 
-	// Do not send gen_204 flag 
+	// Do not send gen_204 flag
 	for(const node of document.querySelectorAll(".csi")){
 		node.parentNode.removeChild(node);
 	}
@@ -186,9 +188,12 @@ function load(){
 		if(legacy){
 			return nodeCnt || nodeMain || window.document;
 		} else {
-			return nodeMain || nodeCnt || window.document;
+			return nodeMain
 		}
 	})();
+
+	// Flag indicating whether the hard tab is loaded on 'DOMContentLoaded'
+	const lazy_hdtb = !legacy || root === nodeCnt;
 
 	// Define selector function
 	const $ = root.querySelector.bind(root);
@@ -208,12 +213,13 @@ function load(){
 	/*
 	 * Functions
 	 */
-	function removeTracking(nodes=[]){
+	function removeTracking(){
 		console.time("removeTracking");
 		const mode = getMode();
 		const badAttrNames = badAttrNamesObj[mode] ?
 			badAttrNamesObj[mode] : badAttrNamesObj["default"];
-		const directLinkParamName = mode === 'isch' ? "url" : 'q'
+		//const directLinkParamName = mode === 'isch' ? "url" : 'q';
+		const directLinkParamName = 'q';
 
 		// search result
 		for(const searchResult of $$(dirtySelector)){
@@ -229,7 +235,7 @@ function load(){
 			}
 			searchResult.href = searchResult.href.replace(regBadParameters, '');
 		}
-		for(const dirtyLink of $$(dirtyLinkSelector)){
+		for(const dirtyLink of document.querySelectorAll(dirtyLinkSelector)){
 			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
 		}
 
@@ -263,13 +269,16 @@ function load(){
 	function startObserve(targetElement, op, func, conf={childList:true}){
 		//console.log("Operation", op , "Register To", targetElement)
 		new MutationObserver((mutations, observer) => {
-			let nodes = Array.prototype.concat.apply([], 
+			let nodes = Array.prototype.concat.apply([],
 				mutations.map(s => Array.prototype.slice.call(s.addedNodes))
-			).filter(n => n.nodeName === 'DIV');
+			).filter(n => n.nodeName !== '#comment');
 
 			//console.log("Nodes Captured By", op, nodes);
 
 			switch(op){
+				case "FORMLOADED":
+					nodes = nodes.filter(n => n.name === "gs_l");
+					break;
 				case "IMAGELOADED":
 					nodes = nodes.filter(n => n.classList.contains("irc_bg"));
 					break;
@@ -292,7 +301,7 @@ function load(){
 			if(nodes.length >= 1){
 				//console.log("Operation", op , "Fired", nodes[0])
 				func();
-				if(["HDTBLOADED", "IMAGELOADED"].includes(op)){
+				if(["HDTBLOADED", "IMAGELOADED", "FORMLOADED"].includes(op)){
 					observer.disconnect();
 				}
 			}
@@ -304,43 +313,39 @@ function load(){
 		startObserve($("#search"), "PAGECHANGE", removeTracking);
 	}
 
-
 	const initMode = getMode();
 	const confDeepObserve = {childList:true, subtree:true};
 
 	// Wait for .hdtb-mn-cont appears in the first page access
-	startObserve(root, "HDTBLOADED", ()=>{
-		document.querySelectorAll("#tsf > input").forEach(s=>removeDOM(s));
-
-		if(legacy) return;
-
-		switch(initMode){
-			case "isch": // Image Search
-				removeTracking();
-				startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
-					$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
-						e.__jsaction = null;
-						e.removeAttribute("jsaction");
+	if(lazy_hdtb && !legacy){
+		startObserve(root, "HDTBLOADED", ()=>{
+			switch(initMode){
+				case "isch": // Image Search
+					removeTracking();
+					startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
+						$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
+							e.__jsaction = null;
+							e.removeAttribute("jsaction");
+						});
 					});
-				});
-				startObserve($("#top_nav"), "HDTBUPDATE", removeTracking, confDeepObserve);
-				break;
-			default:
-				pageInit();
-				// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
-				startObserve(root, "HDTBCHANGE", pageInit);
-				break;
-		}
-	}, confDeepObserve);
+					startObserve($("#top_nav"), "HDTBUPDATE", removeTracking, confDeepObserve);
+					break;
+				default:
+					pageInit();
+					// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
+					startObserve(root, "HDTBCHANGE", pageInit);
+					break;
+			}
+		}, confDeepObserve);
+	}
 
 	if(legacy){
 		removeTracking();
 
-		const form = document.querySelector("form"); // "form#tsf"
-		form.onsubmit = ()=>{
+		startObserve(document.querySelector("form"), "FORMLOADED", ()=>{
 			document.querySelectorAll("form input:not([name='q']):not([name='hl'])")
 				.forEach(s=>removeDOM(s));
-		};
+		});
 
 		console.warn("legacy mode");
 		console.timeEnd("LOAD");
@@ -353,7 +358,7 @@ function load(){
 (function init(){
 	console.time("init");
 
-	onDeclare(window, "google", 1).then(()=>{
+	onDeclare(window, "google", 20).then(()=>{
 		rewriteProperties([
 			[google, 'log', yesman],
 			[google, 'rll', yesman],
@@ -369,16 +374,26 @@ function load(){
 	});
 
 	// Reject Request by img tag
-	const regImageReject = /\/(?:generate|client)_204/;
+	const regBadImageSrc = /\/(?:gen(?:erate)?|client)_204/;
 	Object.defineProperty(
 		window.Image.prototype,
-		"src", 
+		"src",
 		{
 			set: function(url){
-				if(!regImageReject.test(url)){
-					// slow?
-					window.Image.prototype.setAttribute.bind(this)("src", url);
+				if(!regBadImageSrc.test(url)){
+					this.setAttribute("src", url);
 				}
+			},
+		},
+	);
+
+	// Reject unknown parameters by script tag
+	Object.defineProperty(
+		window.HTMLScriptElement.prototype,
+		"src",
+		{
+			set: function(url){
+				this.setAttribute("src", url.replace(regBadParameters,''));
 			},
 		},
 	);
@@ -390,7 +405,7 @@ function load(){
 			return;
 		}
 		// take over the parameters ex:num=20
-		// path += location.search.replace(/./, ''); 
+		// path += location.search.replace(/./, '');
 		origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
 	};
 
