@@ -1,13 +1,22 @@
 // ==UserScript==
-// @name           remove google tracking UWAA
 // @namespace      jp.sceneq.rgtuwaaa
+
+// @name           remove google tracking UWAA
+
 // @description    remove google tracking
+// @description:ja Google追跡UWAAを取り除きなさい
+
+// @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
+
 // @version        0.6
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
 // @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
 // @downloadURL    https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
+
+// @author         sceneq
+// @license        MIT
 // ==/UserScript==
 
 'use strict';
