@@ -353,7 +353,7 @@ function load(){
 (function init(){
 	console.time("init");
 
-	onDeclare(window, "google", 1).then((log)=>{
+	onDeclare(window, "google", 1).then(()=>{
 		rewriteProperties([
 			[google, 'log', yesman],
 			[google, 'rll', yesman],
@@ -366,8 +366,22 @@ function load(){
 			[google, 'aft', yesman],
 			[google, 'kEI', '0'],
 		]);
-		console.log("log rewrited");
 	});
+
+	// Reject Request by img tag
+	const regImageReject = /\/(?:generate|client)_204/;
+	Object.defineProperty(
+		window.Image.prototype,
+		"src", 
+		{
+			set: function(url){
+				if(!regImageReject.test(url)){
+					// slow?
+					window.Image.prototype.setAttribute.bind(this)("src", url);
+				}
+			},
+		},
+	);
 
 	// hook XHR
 	const origOpen = XMLHttpRequest.prototype.open;
