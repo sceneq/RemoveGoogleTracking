@@ -179,13 +179,13 @@ function load() {
 	const legacy = document.getElementById('cst') === null;
 
 	/* Nodes */
-	const nodeMain = window.main;
-	const nodeCnt = window.cnt;
+	const nodeMain = document.getElementById("main");
+	const nodeCnt = document.getElementById("cnt");
 	const root = (() => {
 		if (legacy) {
 			return nodeCnt || nodeMain || window.document;
 		} else {
-			return nodeMain || nodeCnt || window.document;
+			return nodeMain; // || nodeCnt;
 		}
 	})();
 
