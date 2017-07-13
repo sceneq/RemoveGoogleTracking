@@ -263,6 +263,22 @@ function load(){
 		console.timeEnd("removeTracking");
 	}
 
+	const ObserveOp = {
+		LOADED : {
+			FORM: Symbol(),
+			IMAGE: Symbol(),
+			HDTB: Symbol(),
+		},
+		UPDATE : {
+			HDTB: Symbol(),
+		},
+		CHANGE : {
+			HDTB: Symbol(),
+			PAGE: Symbol(),
+		},
+	};
+	const ObserveDisconnectListAfTriggered = Object.values(ObserveOp.LOADED);
+
 	function startObserve(targetElement, op, func, conf={childList:true}){
 		//console.log("Operation", op , "Register To", targetElement)
 		new MutationObserver((mutations, observer) => {
@@ -273,22 +289,22 @@ function load(){
 			//console.log("Nodes Captured By", op, nodes);
 
 			switch(op){
-				case "FORMLOADED":
+				case ObserveOp.LOADED.FORM:
 					nodes = nodes.filter(n => n.name === "gs_l");
 					break;
-				case "IMAGELOADED":
+				case ObserveOp.LOADED.IMAGE:
 					nodes = nodes.filter(n => n.classList.contains("irc_bg"));
 					break;
-				case "HDTBLOADED":
+				case ObserveOp.LOADED.HDTB:
 					nodes = nodes.filter(n => n.className === "hdtb-mn-cont");
 					break;
-				case "HDTBUPDATE":
+				case ObserveOp.UPDATE.HDTB:
 					nodes = nodes.filter(n => n.className === "hdtb-mn-cont");
 					break;
-				case "HDTBCHANGE":
+				case ObserveOp.CHANGE.HDTB:
 					nodes = nodes.filter(n => n.id === "cnt");
 					break;
-				case "PAGECHANGE":
+				case ObserveOp.CHANGE.PAGE:
 					nodes = nodes.filter(n => n.dataset && n.dataset.ved !== undefined);
 					break;
 				default:
@@ -298,7 +314,7 @@ function load(){
 			if(nodes.length >= 1){
 				//console.log("Operation", op , "Fired", nodes[0])
 				func();
-				if(["HDTBLOADED", "IMAGELOADED", "FORMLOADED"].includes(op)){
+				if(ObserveDisconnectListAfTriggered.includes(op)){
 					observer.disconnect();
 				}
 			}
@@ -307,7 +323,7 @@ function load(){
 
 	function pageInit(){
 		removeTracking();
-		startObserve($("#search"), "PAGECHANGE", removeTracking);
+		startObserve($("#search"), ObserveOp.CHANGE.PAGE, removeTracking);
 	}
 
 	const initMode = getMode();
@@ -315,22 +331,22 @@ function load(){
 
 	// Wait for .hdtb-mn-cont appears in the first page access
 	if(lazy_hdtb && !legacy){
-		startObserve(root, "HDTBLOADED", ()=>{
+		startObserve(root, ObserveOp.LOADED.HDTB, ()=>{
 			switch(initMode){
 				case "isch": // Image Search
 					removeTracking();
-					startObserve($("#isr_mc"), "IMAGELOADED", ()=>{
+					startObserve($("#isr_mc"), ObserveOp.LOADED.IMAGE, ()=>{
 						$$(".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']").forEach((e)=>{
 							e.__jsaction = null;
 							e.removeAttribute("jsaction");
 						});
 					});
-					startObserve($("#top_nav"), "HDTBUPDATE", removeTracking, confDeepObserve);
+					startObserve($("#top_nav"), ObserveOp.UPDATE.HDTB, removeTracking, confDeepObserve);
 					break;
 				default:
 					pageInit();
 					// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
-					startObserve(root, "HDTBCHANGE", pageInit);
+					startObserve(root, ObserveOp.CHANGE.HDTB, pageInit);
 					break;
 			}
 		}, confDeepObserve);
@@ -339,7 +355,7 @@ function load(){
 	if(legacy){
 		removeTracking();
 
-		startObserve(document.querySelector("form"), "FORMLOADED", ()=>{
+		startObserve(document.querySelector("form"), ObserveOp.LOADED.FORM, ()=>{
 			document.querySelectorAll("form input:not([name='q']):not([name='hl'])")
 				.forEach(s=>removeDOM(s));
 		});
