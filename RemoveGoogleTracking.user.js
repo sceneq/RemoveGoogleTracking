@@ -353,7 +353,7 @@ function load() {
 						removeTracking();
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
 							$$(
-								".irc_tas, .irc_mil, irc_hol, .irc_but[jsaction*='mousedown']"
+								".irc_tas, .irc_mil, .irc_hol, .irc_but[jsaction*='mousedown']"
 							).forEach(e => {
 								e.__jsaction = null;
 								e.removeAttribute('jsaction');
