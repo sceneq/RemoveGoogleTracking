@@ -169,8 +169,14 @@ function rewriteProperties(prop) {
 function load() {
 	console.time('LOAD');
 
-	/* Overwrite disturbing  functions */
+	/* Overwrite disturbing functions */
 	rewriteProperties([[window, 'rwt', yesman], [window.gbar_, 'Rm', yesman]]);
+
+	// do not send referrer
+	const noreferrerMeta = document.createElement('meta');
+	noreferrerMeta.setAttribute('name', 'referrer');
+	noreferrerMeta.setAttribute('content', 'no-referrer');
+	document.querySelector('head').appendChild(noreferrerMeta);
 
 	/*
 	 * Variables
@@ -442,12 +448,6 @@ function init() {
 		}
 		origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
 	};
-
-	// do not send referrer
-	const noreferrerMeta = document.createElement('meta');
-	noreferrerMeta.setAttribute('name', 'referrer');
-	noreferrerMeta.setAttribute('content', 'no-referrer');
-	document.querySelector('head').appendChild(noreferrerMeta);
 
 	console.timeEnd('init');
 }
