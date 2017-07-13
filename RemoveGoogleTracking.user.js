@@ -21,12 +21,6 @@
 
 'use strict';
 
-// jump
-if(location.pathname === '/' && location.search !== ''){
-	// localStorage.clear();
-	location.search = '';
-}
-
 const yesman = function(){return true};
 const tired = function(){};
 
