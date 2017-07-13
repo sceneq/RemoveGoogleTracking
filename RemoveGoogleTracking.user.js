@@ -185,8 +185,8 @@ function load() {
 	const legacy = document.getElementById('cst') === null;
 
 	/* Nodes */
-	const nodeMain = document.getElementById("main");
-	const nodeCnt = document.getElementById("cnt");
+	const nodeMain = document.getElementById('main');
+	const nodeCnt = document.getElementById('cnt');
 	const root = (() => {
 		if (legacy) {
 			return nodeCnt || nodeMain || window.document;
@@ -390,11 +390,11 @@ function load() {
 		startObserve(document.querySelector('form'), ObserveOp.LOADED.FORM, () => {
 			document
 				.querySelectorAll("form input:not([name='q']):not([name='hl'])")
-				.forEach(s => removeDOM(s));
+				.forEach(removeDOM);
 		});
 
 		// Remove unnecessary parameters from 'option'
-		for(const option of document.querySelectorAll("#mor > option")){
+		for (const option of document.querySelectorAll('#mor > option')) {
 			option.value = option.value.replace(regBadParameters, '');
 		}
 
