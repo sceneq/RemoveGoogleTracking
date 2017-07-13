@@ -173,11 +173,6 @@ function load(){
 		[window.gbar_, 'Rm', yesman],
 	]);
 
-	// Do not send gen_204 flag
-	for(const node of document.querySelectorAll(".csi")){
-		node.parentNode.removeChild(node);
-	}
-
 	/*
 	 * Variables
 	 */
@@ -191,7 +186,7 @@ function load(){
 		if(legacy){
 			return nodeCnt || nodeMain || window.document;
 		} else {
-			return nodeMain
+			return nodeMain || nodeCnt || window.document;
 		}
 	})();
 
@@ -221,7 +216,6 @@ function load(){
 		const mode = getMode();
 		const badAttrNames = badAttrNamesObj[mode] ?
 			badAttrNamesObj[mode] : badAttrNamesObj["default"];
-		//const directLinkParamName = mode === 'isch' ? "url" : 'q';
 		const directLinkParamName = 'q';
 
 		// search result
@@ -358,9 +352,8 @@ function load(){
 	console.timeEnd("LOAD");
 }
 
-(function init(){
+function init(){
 	console.time("init");
-
 	onDeclare(window, "google", 20).then(()=>{
 		rewriteProperties([
 			[google, 'log', yesman],
@@ -407,8 +400,6 @@ function load(){
 		if(regBadPaths.test(path)){
 			return;
 		}
-		// take over the parameters ex:num=20
-		// path += location.search.replace(/./, '');
 		origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
 	};
 
@@ -419,8 +410,11 @@ function load(){
 	document.querySelector("head").appendChild(noreferrerMeta);
 
 	console.timeEnd("init");
-})();
+}
 
+/* Execute */
+
+init();
 window.addEventListener('DOMContentLoaded', load);
 
 // for older browser
