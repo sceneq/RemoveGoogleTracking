@@ -76,8 +76,8 @@ const badParametersNames = [
 	,'cp'
 ];
 const badAttrNamesObj = {
-	default: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'],
-	search: ['onmousedown', 'jsaction', 'ping', 'oncontextmenu'],
+	default: ['onmousedown', 'ping', 'oncontextmenu'],
+	search: ['onmousedown', 'ping', 'oncontextmenu'],
 	vid: ['onmousedown'],
 	isch: [],
 };
