@@ -380,11 +380,17 @@ function load() {
 	if (legacy) {
 		removeTracking();
 
+		// Remove unnecessary input
 		startObserve(document.querySelector('form'), ObserveOp.LOADED.FORM, () => {
 			document
 				.querySelectorAll("form input:not([name='q']):not([name='hl'])")
 				.forEach(s => removeDOM(s));
 		});
+
+		// Remove unnecessary parameters from 'option'
+		for(const option of document.querySelectorAll("#mor > option")){
+			option.value = option.value.replace(regBadParameters, '');
+		}
 
 		console.warn('legacy mode');
 		console.timeEnd('LOAD');
