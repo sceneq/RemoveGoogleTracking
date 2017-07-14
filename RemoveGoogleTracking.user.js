@@ -389,12 +389,6 @@ function load() {
 								e.removeAttribute('jsaction');
 							});
 						});
-						startObserve(
-							$('#top_nav'),
-							ObserveOp.UPDATE.HDTB,
-							removeTracking,
-							confDeepObserve
-						);
 						break;
 					default:
 						pageInit();
