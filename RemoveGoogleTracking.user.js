@@ -305,58 +305,61 @@ function load() {
 
 	const ObserveOp = {
 		LOADED: {
-			FORM: Symbol(),
-			IMAGE: Symbol(),
-			HDTB: Symbol()
+			FORM: ['INPUT', 'name', /^oq$/],
+			IMAGE: ['DIV', 'class', /.*irc_bg.*/],
+			HDTB: ['DIV', 'class', /^hdtb-mn-cont$/]
 		},
 		UPDATE: {
-			HDTB: Symbol()
+			HDTB: ['DIV', 'class', /^hdtb-mn-cont$/]
 		},
 		CHANGE: {
-			HDTB: Symbol(),
-			PAGE: Symbol()
+			HDTB: ['DIV', 'id', /^cnt$/],
+			PAGE: ['DIV', 'data-set', /.+/]
 		}
 	};
-	const ObserveDisconnectListAfTriggered = Object.values(ObserveOp.LOADED);
+
+	const ObserveUntilLoadedList = Object.values(ObserveOp.LOADED);
 
 	function startObserve(targetElement, op, func, conf = { childList: true }) {
-		//console.log("Operation", op , "Register To", targetElement)
+		if (targetElement === null) {
+			console.warn('targetElement is null', op, func);
+			return;
+		}
+		//console.log(op, 'Register To', targetElement);
+		const targetElementName = op[0];
+		const targetAttrName = op[1];
+		const targetAttrValueReg = op[2];
+		const filterFunc = n => {
+			return (
+				n.nodeName === targetElementName &&
+				targetAttrValueReg.test(n.getAttribute(targetAttrName))
+			);
+		};
+
+		// if targetElement already appeared
+		if (
+			ObserveUntilLoadedList.includes(op) &&
+			Array.prototype.slice
+				.call(targetElement.querySelectorAll(targetElementName))
+				.filter(filterFunc).length >= 1
+		) {
+			//console.log(op, 'Register To', targetElement);
+			func();
+			return;
+		}
+
 		new MutationObserver((mutations, observer) => {
-			let nodes = Array.prototype.concat
+			const nodes = Array.prototype.concat
 				.apply([], mutations.map(s => Array.prototype.slice.call(s.addedNodes)))
-				.filter(n => n.nodeName !== '#comment');
-
-			//console.log("Nodes Captured By", op, nodes);
-
-			switch (op) {
-				case ObserveOp.LOADED.FORM:
-					nodes = nodes.filter(n => n.name === 'gs_l');
-					break;
-				case ObserveOp.LOADED.IMAGE:
-					nodes = nodes.filter(n => n.classList.contains('irc_bg'));
-					break;
-				case ObserveOp.LOADED.HDTB:
-					nodes = nodes.filter(n => n.className === 'hdtb-mn-cont');
-					break;
-				case ObserveOp.UPDATE.HDTB:
-					nodes = nodes.filter(n => n.className === 'hdtb-mn-cont');
-					break;
-				case ObserveOp.CHANGE.HDTB:
-					nodes = nodes.filter(n => n.id === 'cnt');
-					break;
-				case ObserveOp.CHANGE.PAGE:
-					nodes = nodes.filter(n => n.dataset && n.dataset.ved !== undefined);
-					break;
-				default:
-					break;
-			}
+				.filter(filterFunc);
 
 			if (nodes.length >= 1) {
-				//console.log("Operation", op , "Fired", nodes[0])
+				//console.log(targetElement, op, 'Fired', nodes[0], func);
 				func();
-				if (ObserveDisconnectListAfTriggered.includes(op)) {
+				if (ObserveUntilLoadedList.includes(op)) {
 					observer.disconnect();
 				}
+				//return startObserve;
 			}
 		}).observe(targetElement, conf);
 	}
