@@ -20,6 +20,7 @@
 // ==/UserScript==
 
 'use strict';
+window = unsafeWindow || window;
 
 const yesman = function() {
 	return true;
