@@ -411,6 +411,12 @@ function load() {
 				.forEach(removeDOM);
 		});
 
+		// Remove unnecessary parameters from hdtb
+		const hdtbRoot = $('#hdtbMenus');
+		if (hdtbRoot) {
+			startObserve(hdtbRoot, ObserveOp.LOADED.HDTB, removeBadParameters);
+		}
+
 		// Remove unnecessary parameters from 'option'
 		for (const option of document.querySelectorAll('#mor > option')) {
 			option.value = option.value.replace(regBadParameters, '');
