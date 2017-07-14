@@ -170,10 +170,6 @@ async function onDeclare(obj, propertyStr, interval = 80) {
 	});
 }
 
-function removeDOM(node) {
-	node.parentNode.removeChild(node);
-}
-
 function rewriteProperties(prop) {
 	prop.forEach(table => {
 		//const targetObject = typeof table[0] === 'function' ? table[0]() : table[0];
@@ -235,6 +231,14 @@ function load() {
 	/*
 	 * Functions
 	 */
+	function removeFormInputs() {
+		for (const node of document.querySelectorAll(
+			"form[id*=sf] input:not([name='q']):not([name='hl'])"
+		)) {
+			node.parentNode.removeChild(node);
+		}
+	}
+
 	function removeBadParameters() {
 		for (const dirtyLink of document.querySelectorAll(dirtyLinkSelector)) {
 			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
@@ -400,6 +404,7 @@ function load() {
 						startObserve(root, ObserveOp.CHANGE.HDTB, pageInit);
 						break;
 				}
+				removeFormInputs();
 			},
 			confDeepObserve
 		);
@@ -409,11 +414,11 @@ function load() {
 		removeTracking();
 
 		// Remove unnecessary input
-		startObserve(document.querySelector('form'), ObserveOp.LOADED.FORM, () => {
-			document
-				.querySelectorAll("form input:not([name='q']):not([name='hl'])")
-				.forEach(removeDOM);
-		});
+		startObserve(
+			document.querySelector('form'),
+			ObserveOp.LOADED.FORM,
+			removeFormInputs
+		);
 
 		// Remove unnecessary parameters from hdtb
 		const hdtbRoot = $('#hdtbMenus');
