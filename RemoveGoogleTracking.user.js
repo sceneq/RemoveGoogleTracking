@@ -228,13 +228,17 @@ function load() {
 		}
 	})();
 
+	// List of parameters to keep
+	const saveParamNames = ['q', 'hl', 'num'];
+	const obstacleInputsSelector =
+		'form[id*=sf] input' +
+		saveParamNames.map(s => ':not([name=' + s + '])').join('');
+
 	/*
 	 * Functions
 	 */
 	function removeFormInputs() {
-		for (const node of document.querySelectorAll(
-			"form[id*=sf] input:not([name='q']):not([name='hl'])"
-		)) {
+		for (const node of document.querySelectorAll(obstacleInputsSelector)) {
 			node.parentNode.removeChild(node);
 		}
 	}
