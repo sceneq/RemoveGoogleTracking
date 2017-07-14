@@ -90,7 +90,24 @@ const dirtyLinkSelectors = [
 	'a.q.qs',
 
 	// doodle
-	'a.doodle'
+	'a.doodle',
+
+	// Upper left menu
+	'.gb_Z > a',
+
+	// Logo
+	'a#logo',
+	'div#qslc > a',
+	'header#hdr > div > a',
+
+	// search button?
+	'form#sf > a',
+
+	/// imagesearch
+	// colors
+	'div#sc-block > div > a',
+	// size
+	'a.hdtb-mitem'
 ];
 
 const badPaths = ['imgevent'];
@@ -217,6 +234,12 @@ function load() {
 	/*
 	 * Functions
 	 */
+	function removeBadParameters() {
+		for (const dirtyLink of document.querySelectorAll(dirtyLinkSelector)) {
+			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
+		}
+	}
+
 	function removeTracking() {
 		console.time('removeTracking');
 		const mode = getMode();
@@ -247,9 +270,7 @@ function load() {
 			}
 			searchResult.href = searchResult.href.replace(regBadParameters, '');
 		}
-		for (const dirtyLink of document.querySelectorAll(dirtyLinkSelector)) {
-			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
-		}
+		removeBadParameters();
 
 		switch (mode) {
 			case 'shop':
@@ -354,9 +375,12 @@ function load() {
 			root,
 			ObserveOp.LOADED.HDTB,
 			() => {
+				// hdtb loaded
 				switch (initMode) {
 					case 'isch': // Image Search
 						removeTracking();
+
+						// Remove unnecessary script from buttons
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
 							$$(
 								".irc_tas, .irc_mil, .irc_hol, .irc_but[jsaction*='mousedown']"
