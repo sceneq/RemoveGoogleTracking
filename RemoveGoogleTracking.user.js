@@ -20,7 +20,11 @@
 // ==/UserScript==
 
 'use strict';
-window = unsafeWindow || window;
+
+try{
+	window = window.unsafeWindow || window;
+} catch (e) {
+}
 
 const yesman = function() {
 	return true;
