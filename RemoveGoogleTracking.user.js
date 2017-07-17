@@ -233,7 +233,7 @@ function load() {
 	})();
 
 	// List of parameters to keep
-	const saveParamNames = ['q', 'hl', 'num'];
+	const saveParamNames = ['q', 'hl', 'num', 'tbm'];
 	const obstacleInputsSelector =
 		'form[id*=sf] input' +
 		saveParamNames.map(s => ':not([name=' + s + '])').join('');
