@@ -8,7 +8,7 @@
 
 // @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
 
-// @version        0.6
+// @version        0.7
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
@@ -21,10 +21,9 @@
 
 'use strict';
 
-try{
+try {
 	window = window.unsafeWindow || window;
-} catch (e) {
-}
+} catch (e) {}
 
 const yesman = function() {
 	return true;
@@ -175,13 +174,13 @@ async function onDeclare(obj, propertyStr, interval = 80) {
 }
 
 function rewriteProperties(prop) {
-	prop.forEach(table => {
+	for (const table of prop) {
 		//const targetObject = typeof table[0] === 'function' ? table[0]() : table[0];
 		Object.defineProperty(table[0] || {}, table[1], {
 			value: table[2],
 			writable: false
 		});
-	});
+	}
 }
 
 function load() {
@@ -264,9 +263,9 @@ function load() {
 		// search result
 		for (const searchResult of $$(dirtySelector)) {
 			// remove attributes
-			badAttrNames.map(s => {
-				searchResult.removeAttribute(s);
-			});
+			for(const badAttrName of badAttrNames){
+				searchResult.removeAttribute(badAttrName);
+			}
 
 			// hide referrer
 			searchResult.rel = 'noreferrer';
@@ -364,6 +363,7 @@ function load() {
 		new MutationObserver((mutations, observer) => {
 			const nodes = Array.prototype.concat
 				.apply([], mutations.map(s => Array.prototype.slice.call(s.addedNodes)))
+				//.map((s)=>{console.log(s);return s})
 				.filter(filterFunc);
 
 			if (nodes.length >= 1) {
@@ -398,13 +398,21 @@ function load() {
 
 						// Remove unnecessary script from buttons
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
-							$$(
+							for (const node of $$(
 								".irc_tas, .irc_mil, .irc_hol, .irc_but[jsaction*='mousedown']"
-							).forEach(e => {
-								e.__jsaction = null;
-								e.removeAttribute('jsaction');
-							});
+							)) {
+								node.__jsaction = null;
+								node.removeAttribute('jsaction');
+							}
 						});
+
+						// on search options updated
+						startObserve(
+							$('#top_nav'),
+							ObserveOp.UPDATE.HDTB,
+							removeBadParameters,
+							confDeepObserve
+						);
 						break;
 					default:
 						pageInit();
@@ -416,9 +424,7 @@ function load() {
 			},
 			confDeepObserve
 		);
-	}
-
-	if (legacy) {
+	} else if (legacy) {
 		removeTracking();
 
 		// Remove unnecessary input
