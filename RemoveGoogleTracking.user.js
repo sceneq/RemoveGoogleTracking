@@ -263,7 +263,7 @@ function load() {
 		// search result
 		for (const searchResult of $$(dirtySelector)) {
 			// remove attributes
-			for(const badAttrName of badAttrNames){
+			for (const badAttrName of badAttrNames) {
 				searchResult.removeAttribute(badAttrName);
 			}
 
@@ -290,8 +290,11 @@ function load() {
 				//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 				if (legacy) break;
 				onDeclare(google, 'pmc.spop.r').then(shopObj => {
-					const shopElements = $$('.pstl');
-					const shopLinks = Object.values(shopObj).map(a => a[34][6]);
+					const shopElements = $$('#rso a.pstl');
+					const shopImgElements = $$("#rso a.psliimg");
+					const shopArrays = Object.values(shopObj);
+					const shopLinks = shopArrays.map(a => a[34][6]);
+					const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
 
 					if (shopElements.length !== shopLinks.length) {
 						console.warn(
@@ -302,9 +305,28 @@ function load() {
 						return;
 					}
 
-					const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
-					for (const detail of zip([shopElements, shopLinks])) {
-						detail[0].href = detail[1];
+					for (const detail of zip([shopElements, shopLinks, shopImgElements, shopArrays])) {
+						// for (shopElements, shopLinks, shopImgElements, shopArrays) in zip(~)
+						const shopElement = detail[0];
+						const shopLink = detail[1];
+						const shopImgElement = detail[2];
+						const shopArray = detail[3];
+
+						// Overwrite link
+						shopElement.href = shopImgElement.href = shopLink;
+
+						// Disable click actions
+						//detail[0].__jsaction = null;
+						//detail[0].removeAttribute("jsaction");
+
+						// Overwrite variables used when link clicked
+						try {
+							shopArray[3][0][1] = shopLink;
+							shopArray[14][1] = shopLink;
+							shopArray[89][16] = shopLink;
+							shopArray[89][18][0] = shopLink;
+							shopArray[85][3] = shopLink;
+						} catch (e) {}
 					}
 					console.log('Links Rewrited');
 				});
@@ -399,7 +421,7 @@ function load() {
 						// Remove unnecessary script from buttons
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
 							for (const node of $$(
-								".irc_tas, .irc_mil, .irc_hol, .irc_but[jsaction*='mousedown']"
+								'a.irc_tas, a.irc_mil, a.irc_hol, a.irc_but'
 							)) {
 								node.__jsaction = null;
 								node.removeAttribute('jsaction');
@@ -471,7 +493,7 @@ function init() {
 	});
 
 	// Reject Request by img tag
-	const regBadImageSrc = /\/(?:gen(?:erate)?|client)_204/;
+	const regBadImageSrc = /\/(?:gen(?:erate)?|client|fp)_204|metric\.gstatic\.com/;
 	Object.defineProperty(window.Image.prototype, 'src', {
 		set: function(url) {
 			if (!regBadImageSrc.test(url)) {
