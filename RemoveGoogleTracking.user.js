@@ -32,8 +32,8 @@ const tired = function() {};
 
 // matching tracking paramaters
 const badParametersNames = [
-	'biw',
-	'bih',
+	'biw',       // offsetWidth
+	'bih',       // offsetHeight
 	'ei',
 	'sa',
 	'ved',
@@ -460,6 +460,18 @@ function load() {
 		const hdtbRoot = $('#hdtbMenus');
 		if (hdtbRoot) {
 			startObserve(hdtbRoot, ObserveOp.LOADED.HDTB, removeBadParameters);
+		}
+
+		if (document.getElementById("hdr")){
+			const stopAddParams = s => {
+				const src = s.srcElement;
+				if(src.nodeName === "A" && src.href.match(/\/search.*[?&]tbm=isch/)){
+					s.stopPropagation();
+				}
+			};
+			console.log("FUCK");
+			document.addEventListener("click", stopAddParams, true);
+			document.addEventListener("touchStart", stopAddParams, true);
 		}
 
 		// Remove unnecessary parameters from 'option'
