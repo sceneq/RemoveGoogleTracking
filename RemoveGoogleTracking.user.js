@@ -32,8 +32,8 @@ const tired = function() {};
 
 // matching tracking paramaters
 const badParametersNames = [
-	'biw',       // offsetWidth
-	'bih',       // offsetHeight
+	'biw', // offsetWidth
+	'bih', // offsetHeight
 	'ei',
 	'sa',
 	'ved',
@@ -291,7 +291,7 @@ function load() {
 				if (legacy) break;
 				onDeclare(google, 'pmc.spop.r').then(shopObj => {
 					const shopElements = $$('#rso a.pstl');
-					const shopImgElements = $$("#rso a.psliimg");
+					const shopImgElements = $$('#rso a.psliimg');
 					const shopArrays = Object.values(shopObj);
 					const shopLinks = shopArrays.map(a => a[34][6]);
 					const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
@@ -305,7 +305,12 @@ function load() {
 						return;
 					}
 
-					for (const detail of zip([shopElements, shopLinks, shopImgElements, shopArrays])) {
+					for (const detail of zip([
+						shopElements,
+						shopLinks,
+						shopImgElements,
+						shopArrays
+					])) {
 						// for (shopElements, shopLinks, shopImgElements, shopArrays) in zip(~)
 						const shopElement = detail[0];
 						const shopLink = detail[1];
@@ -462,16 +467,16 @@ function load() {
 			startObserve(hdtbRoot, ObserveOp.LOADED.HDTB, removeBadParameters);
 		}
 
-		if (document.getElementById("hdr")){
+		if (document.getElementById('hdr')) {
 			const stopAddParams = s => {
 				const src = s.srcElement;
-				if(src.nodeName === "A" && src.href.match(/\/search.*[?&]tbm=isch/)){
+				if (src.nodeName === 'A' && src.href.match(/\/search.*[?&]tbm=isch/)) {
 					s.stopPropagation();
 				}
 			};
-			console.log("FUCK");
-			document.addEventListener("click", stopAddParams, true);
-			document.addEventListener("touchStart", stopAddParams, true);
+			console.log('FUCK');
+			document.addEventListener('click', stopAddParams, true);
+			document.addEventListener('touchStart', stopAddParams, true);
 		}
 
 		// Remove unnecessary parameters from 'option'
