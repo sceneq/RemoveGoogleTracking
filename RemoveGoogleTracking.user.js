@@ -273,7 +273,7 @@ function load() {
 	})();
 
 	// List of parameters to keep
-	const saveParamNames = ['q', 'hl', 'num', 'tbm'];
+	const saveParamNames = ['q', 'hl', 'num', 'tbm', 'btnI', 'btnK'];
 	const obstacleInputsSelector =
 		'form[id*=sf] input' +
 		saveParamNames.map(s => ':not([name=' + s + '])').join('');
@@ -454,6 +454,13 @@ function load() {
 
 	const confDeepObserve = { childList: true, subtree: true };
 
+	// Remove unnecessary input
+	startObserve(
+		document.querySelector('form'),
+		ObserveOp.LOADED.FORM,
+		removeFormInputs
+	);
+
 	// Wait for .hdtb-mn-cont appears in the first page access
 	if (lazy_hdtb && !legacy) {
 		startObserve(
@@ -495,13 +502,6 @@ function load() {
 		);
 	} else if (legacy) {
 		removeTracking();
-
-		// Remove unnecessary input
-		startObserve(
-			document.querySelector('form'),
-			ObserveOp.LOADED.FORM,
-			removeFormInputs
-		);
 
 		// Remove unnecessary parameters from hdtb
 		const hdtbRoot = $('#hdtbMenus');
@@ -596,4 +596,4 @@ window.addEventListener('DOMContentLoaded', load);
 // for older browser
 if (document.getElementById('universal') !== null) {
 	load();
-}
+e
