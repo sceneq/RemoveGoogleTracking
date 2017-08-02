@@ -596,4 +596,4 @@ window.addEventListener('DOMContentLoaded', load);
 // for older browser
 if (document.getElementById('universal') !== null) {
 	load();
-e
+}
