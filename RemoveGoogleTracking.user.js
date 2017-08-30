@@ -56,7 +56,7 @@ const badParametersNamesObj = {
 		'sa',
 		'ved',
 		'source',
-		'prmd',
+		'prds',
 		'bvm',
 		'bav',
 		'psi',
@@ -77,7 +77,7 @@ const badParametersNamesObj = {
 		'forward',
 		'ndsp',
 		'csi',
-		'tbnid'
+		'tbnid',
 		//'docid',   // related images
 		//'imgdii',  // related images
 	],
@@ -174,7 +174,7 @@ const dirtyLinkSelectors = [
 	'a.hdtb-mitem'
 ];
 
-const badPaths = ['imgevent'];
+const badPaths = ['imgevent', 'shopping\\/product\\/.*?\\/popout'];
 
 /* Compile */
 // The first paramater is probably 'q' so '?' does not consider
@@ -273,7 +273,7 @@ function load() {
 	})();
 
 	// List of parameters to keep
-	const saveParamNames = ['q', 'hl', 'num', 'tbm', 'tbs', 'lr', 'btnI', 'btnK'];
+	const saveParamNames = ['q', 'hl', 'num', 'tbm', 'tbs', 'lr', 'btnI', 'btnK', 'safe'];
 	const obstacleInputsSelector =
 		'form[id*=sf] input' +
 		saveParamNames.map(s => ':not([name=' + s + '])').join('');
