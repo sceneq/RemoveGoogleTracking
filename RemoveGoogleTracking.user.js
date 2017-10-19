@@ -65,7 +65,8 @@ const badParametersNamesObj = {
 		'ech',
 		'gs_gbg',
 		'gs_rn',
-		'cp'
+		'cp',
+		'ictx'
 	],
 	// image search
 	isch: [
@@ -77,7 +78,7 @@ const badParametersNamesObj = {
 		'forward',
 		'ndsp',
 		'csi',
-		'tbnid',
+		'tbnid'
 		//'docid',   // related images
 		//'imgdii',  // related images
 	],
@@ -161,6 +162,7 @@ const dirtyLinkSelectors = [
 
 	// Logo
 	'a#logo',
+	'div #logocont > a',
 	'div#qslc > a',
 	'header#hdr > div > a',
 
@@ -273,7 +275,17 @@ function load() {
 	})();
 
 	// List of parameters to keep
-	const saveParamNames = ['q', 'hl', 'num', 'tbm', 'tbs', 'lr', 'btnI', 'btnK', 'safe'];
+	const saveParamNames = [
+		'q',
+		'hl',
+		'num',
+		'tbm',
+		'tbs',
+		'lr',
+		'btnI',
+		'btnK',
+		'safe'
+	];
 	const obstacleInputsSelector =
 		'form[id*=sf] input' +
 		saveParamNames.map(s => ':not([name=' + s + '])').join('');
@@ -551,7 +563,7 @@ function init() {
 
 	// Reject Request by img tag
 	//maps:log204
-	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\./;
+	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|\/adsid\/google\/ui/;
 	Object.defineProperty(window.Image.prototype, 'src', {
 		set: function(url) {
 			if (!regBadImageSrc.test(url)) {
@@ -574,6 +586,16 @@ function init() {
 			origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
 		}
 	};
+
+	// beacon
+	if ('navigator' in window) {
+		const origSendBeacon = navigator.sendBeacon.bind(navigator);
+		navigator.sendBeacon = (path, data) => {
+			if (!regBadImageSrc.test(path)) {
+				origSendBeacon(path, data);
+			}
+		};
+	}
 }
 
 /* Execute */
