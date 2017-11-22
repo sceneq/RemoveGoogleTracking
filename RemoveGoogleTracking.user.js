@@ -200,7 +200,7 @@ function sleep(ms) {
 }
 
 /* Return Promise when declared the variable name specified by argument */
-async function onDeclare(obj, propertyStr, interval = 80) {
+function onDeclare(obj, propertyStr, interval = 80) {
 	return new Promise(async function(resolve, reject) {
 		const propertyNames = propertyStr.split('.');
 		let currObj = obj;
@@ -551,7 +551,7 @@ function init() {
 
 	// Reject Request by img tag
 	//maps:log204
-	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\./;
+	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
 	Object.defineProperty(window.Image.prototype, 'src', {
 		set: function(url) {
 			if (!regBadImageSrc.test(url)) {
