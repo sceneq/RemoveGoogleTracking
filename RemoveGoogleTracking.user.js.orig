@@ -563,7 +563,11 @@ function init() {
 
 	// Reject Request by img tag
 	//maps:log204
+<<<<<<< HEAD
 	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
+=======
+	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|\/adsid\/google\/ui/;
+>>>>>>> 9cf445b13a766413de834ad6b0fde72b25f1bd85
 	Object.defineProperty(window.Image.prototype, 'src', {
 		set: function(url) {
 			if (!regBadImageSrc.test(url)) {
