@@ -486,9 +486,7 @@ function load() {
 
 						// Remove unnecessary script from buttons
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
-							for (const node of $$(
-								'a.irc_tas, a.irc_mil, a.irc_hol, a.irc_but, .irc_vpl, .irc_lth'
-							)) {
+							for (const node of $$("a[class*=irc_]")) {
 								node.__jsaction = null;
 								node.removeAttribute('jsaction');
 							}
