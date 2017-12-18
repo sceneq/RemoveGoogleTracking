@@ -311,8 +311,8 @@ function load() {
 			//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 			if (legacy) return;
 			onDeclare(google, 'pmc.spop.r').then(shopObj => {
-				const shopElements = $$('#rso a.pstl');
-				const shopImgElements = $$('#rso a.psliimg');
+				const shopElements = $$(".sh-dlr__content>div:nth-child(2)>div>div:nth-child(1)>div>a");
+				const shopImgElements = $$("#rso .sh-dlr__thumbnail");
 				const shopArrays = Object.values(shopObj);
 				const shopLinks = shopArrays.map(a => a[34][6]);
 				const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
@@ -332,11 +332,7 @@ function load() {
 					shopImgElements,
 					shopArrays
 				])) {
-					// for (shopElements, shopLinks, shopImgElements, shopArrays) in zip(~)
-					const shopElement = detail[0];
-					const shopLink = detail[1];
-					const shopImgElement = detail[2];
-					const shopArray = detail[3];
+					const [shopElement,shopLink,shopImgElement,shopArray] = detail;
 
 					// Overwrite link
 					shopElement.href = shopImgElement.href = shopLink;
