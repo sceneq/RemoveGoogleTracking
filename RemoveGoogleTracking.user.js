@@ -311,7 +311,7 @@ function load() {
 			//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 			if (legacy) return;
 			onDeclare(google, 'pmc.spop.r').then(shopObj => {
-				const shopElements = $$(".sh-dlr__content>div:nth-child(2)>div>div:nth-child(1)>div>a");
+				const shopElements = $$(".sh-dlr__content>div:nth-child(2)>div>div:nth-child(1)>div:nth-child(1)>a");
 				const shopImgElements = $$("#rso .sh-dlr__thumbnail");
 				const shopArrays = Object.values(shopObj);
 				const shopLinks = shopArrays.map(a => a[34][6]);
