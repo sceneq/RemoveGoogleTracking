@@ -312,7 +312,9 @@ function load() {
 			if (legacy) return;
 			onDeclare(google, 'pmc.spop.r').then(shopObj => {
 				const _tempAnchors = $$(".sh-dlr__content a[jsaction='spop.c']");
-				const [shopAnchors, shopThumbnailAnchors] = [0,1].map(m => _tempAnchors.filter((_,i) => i % 2 === m));
+				const [shopAnchors, shopThumbnailAnchors] = [0, 1].map(m =>
+					_tempAnchors.filter((_, i) => i % 2 === m)
+				);
 				const shopArrays = Object.values(shopObj);
 				const shopLinks = shopArrays.map(a => a[34][6]);
 				const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
@@ -332,7 +334,7 @@ function load() {
 					shopThumbnailAnchors,
 					shopArrays
 				])) {
-					const [shopAnchor, shopLink,shopThumbnailAnchor,shopArray] = detail;
+					const [shopAnchor, shopLink, shopThumbnailAnchor, shopArray] = detail;
 
 					shopAnchor.href = shopThumbnailAnchor.href = shopLink;
 
@@ -481,7 +483,7 @@ function load() {
 
 						// Remove unnecessary script from buttons
 						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
-							for (const node of $$("a[class*=irc_]")) {
+							for (const node of $$('a[class*=irc_]')) {
 								node.__jsaction = null;
 								node.removeAttribute('jsaction');
 							}
