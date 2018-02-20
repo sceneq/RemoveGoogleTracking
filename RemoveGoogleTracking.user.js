@@ -311,31 +311,30 @@ function load() {
 			//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 			if (legacy) return;
 			onDeclare(google, 'pmc.spop.r').then(shopObj => {
-				const shopElements = $$(".sh-dlr__content>div:nth-child(2)>div>div:nth-child(1)>div:nth-child(1)>a");
-				const shopImgElements = $$("#rso .sh-dlr__thumbnail");
+				const _tempAnchors = $$(".sh-dlr__content a[jsaction='spop.c']");
+				const [shopAnchors, shopThumbnailAnchors] = [0,1].map(m => _tempAnchors.filter((_,i) => i % 2 === m));
 				const shopArrays = Object.values(shopObj);
 				const shopLinks = shopArrays.map(a => a[34][6]);
 				const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
 
-				if (shopElements.length !== shopLinks.length) {
+				if (shopAnchors.length !== shopLinks.length) {
 					console.warn(
 						'length does not match',
-						shopElements.length,
+						shopAnchors.length,
 						shopLinks.length
 					);
 					return;
 				}
 
 				for (const detail of zip([
-					shopElements,
+					shopAnchors,
 					shopLinks,
-					shopImgElements,
+					shopThumbnailAnchors,
 					shopArrays
 				])) {
-					const [shopElement,shopLink,shopImgElement,shopArray] = detail;
+					const [shopAnchor, shopLink,shopThumbnailAnchor,shopArray] = detail;
 
-					// Overwrite link
-					shopElement.href = shopImgElement.href = shopLink;
+					shopAnchor.href = shopThumbnailAnchor.href = shopLink;
 
 					// Disable click actions
 					//detail[0].__jsaction = null;
