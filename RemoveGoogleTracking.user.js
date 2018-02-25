@@ -73,7 +73,6 @@ const badParametersNamesObj = {
 		'scroll',
 		'vet',
 		'yv',
-		'ijn',
 		'iact',
 		'forward',
 		'ndsp',
