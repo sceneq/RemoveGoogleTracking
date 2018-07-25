@@ -543,7 +543,6 @@ function init() {
 	onDeclare(window, 'google', 20).then(() => {
 		rewriteProperties([
 			[google, 'log', yesman],
-			[google, 'rll', yesman],
 			[google, 'logUrl', tired],
 			[google, 'getEI', yesman],
 			[google, 'getLEI', yesman],
