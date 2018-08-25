@@ -310,7 +310,7 @@ function load() {
 			//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
 			if (legacy) return;
 			onDeclare(google, 'pmc.spop.r').then(shopObj => {
-				const _tempAnchors = $$(".sh-dgr__content a[jsaction='spop.c']");
+				const _tempAnchors = $$("div[class$='__content'] a[jsaction='spop.c']");
 				const [shopAnchors, shopThumbnailAnchors] = [0, 1].map(m =>
 					_tempAnchors.filter((_, i) => i % 2 === m)
 				);
