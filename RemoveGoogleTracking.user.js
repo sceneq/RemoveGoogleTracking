@@ -8,7 +8,7 @@
 
 // @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
 
-// @version        0.8
+// @version        0.9
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
