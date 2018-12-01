@@ -175,7 +175,7 @@ const dirtyLinkSelectors = [
 	'a.hdtb-mitem'
 ];
 
-const badPaths = ['imgevent', 'shopping\\/product\\/.*?\\/popout'];
+const badPaths = ['imgevent', 'shopping\\/product\\/.*?\\/popout', 'async/ecr', 'async/bgasy'];
 
 /* Compile */
 // The first paramater is probably 'q' so '?' does not consider
