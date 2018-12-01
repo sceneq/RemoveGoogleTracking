@@ -469,6 +469,21 @@ function load() {
 		removeFormInputs
 	);
 
+	const tsf = document.getElementById("tsf");
+	if(tsf === null){
+		console.warn("#tsf not found");
+	}else{
+		//tsf.addEventListener("submit", () => {
+		const _submit = tsf.submit.bind(tsf);
+		tsf.submit = () => {
+			const sel = "input " + badParametersNames.map(p => `[name=${p}]`).join(",");
+			for(const node of tsf.querySelectorAll(sel)){
+				node.parentNode.removeChild(node);
+			}
+			_submit();
+		};
+	}
+
 	// Wait for .hdtb-mn-cont appears in the first page access
 	if (lazy_hdtb && !legacy) {
 		startObserve(
