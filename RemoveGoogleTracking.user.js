@@ -66,7 +66,8 @@ const badParametersNamesObj = {
 		'gs_gbg',
 		'gs_rn',
 		'cp',
-		'ictx'
+		'ictx',
+		'cshid'
 	],
 	// image search
 	isch: [
