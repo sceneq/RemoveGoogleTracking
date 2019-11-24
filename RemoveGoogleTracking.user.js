@@ -8,7 +8,7 @@
 
 // @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
 
-// @version        0.10
+// @version        0.11
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-start
@@ -396,7 +396,6 @@ function load() {
 
 	const ObserveOp = {
 		LOADED: {
-			FORM: ['INPUT', 'name', /^oq$/],
 			IMAGE: ['DIV', 'class', /.*irc_bg.*/],
 			HDTB: ['DIV', 'class', /^hdtb-mn-cont$/]
 		},
@@ -462,13 +461,6 @@ function load() {
 	}
 
 	const confDeepObserve = { childList: true, subtree: true };
-
-	// Remove unnecessary input
-	startObserve(
-		document.querySelector('form'),
-		ObserveOp.LOADED.FORM,
-		removeFormInputs
-	);
 
 	const tsf = document.getElementById("tsf");
 	if(tsf === null){
