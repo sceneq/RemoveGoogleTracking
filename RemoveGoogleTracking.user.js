@@ -48,8 +48,10 @@ const waitUntilDeclare = ({ obj, property, interval }) => {
 const untrackBuilder = arg => {
 	const r = arg.badParamsRegex;
 	return a => {
-		if (a.getAttribute('href')?.startsWith('/url?')) {
-			a.href = new URLSearchParams(a.getAttribute('href').slice(5)).get('q');
+		const href = a.getAttribute('href');
+		if(href === null) return;
+		if (href.startsWith('/url?')) {
+			a.href = new URLSearchParams(href.slice(5)).get('q');
 		} else {
 			a.removeAttribute('ping');
 			a.href = a.href.replace(r, '');
