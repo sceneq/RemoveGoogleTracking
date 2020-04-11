@@ -1,89 +1,119 @@
 // ==UserScript==
 // @namespace      jp.sceneq.rgtuwaaa
-
 // @name           remove google tracking UWAA
-
 // @description    remove google tracking
-// @description:ja Google追跡UWAAを取り除きなさい
-
 // @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
-
-// @version        0.11
+// @version        0.20
 // @include        https://www.google.*/*
 // @grant          none
-// @run-at         document-start
+// @run-at         document-body
 // @updateURL      https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
 // @downloadURL    https://raw.githubusercontent.com/sceneq/RemoveGoogleTracking/master/RemoveGoogleTracking.user.js
-
 // @author         sceneq
 // @license        MIT
 // ==/UserScript==
 
-'use strict';
-console.time('init');
+const yes = () => true;
+const doNothing = () => {};
+const $ = (s, n = document) => n.querySelector(s);
+const $$ = (s, n = document) => [...n.querySelectorAll(s)];
+const sleep = millis => new Promise(resolve => setTimeout(resolve, millis));
+const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
 
-try {
-	window = window.unsafeWindow || window;
-} catch (e) {}
-
-const yesman = function() {
-	return true;
+const rewriteProperties = props => {
+	for (const p of props) {
+		Object.defineProperty(p[0] || {}, p[1], {
+			value: p[2],
+			writable: false,
+		});
+	}
 };
-const tired = function() {};
 
-/* Return the current Google search mode */
-function getParam(parameter, name) {
-	var results = new RegExp('[?&]' + name + '=([^&#]*)').exec(parameter);
-	if (results === null) {
+const waitUntilDeclare = ({ obj, property, interval }) => {
+	console.debug('waitUntilDeclare', obj.toString(), property);
+	return new Promise(async (resolve, reject) => {
+		const propertyNames = property.split('.');
+		let currObj = obj;
+		for (const propertyName of propertyNames) {
+			while (!(propertyName in currObj) || currObj[propertyName] === null) {
+				await sleep(interval);
+			}
+			currObj = currObj[propertyName];
+		}
+		console.debug('waitUntilDeclare', obj.toString(), property, 'Done');
+		resolve(currObj);
+	});
+};
+
+const untrackBuilder = arg => {
+	const r = arg.badParamsRegex;
+	return a => {
+		if (a.getAttribute('href')?.startsWith('/url?')) {
+			a.href = new URLSearchParams(a.getAttribute('href').slice(5)).get('q');
+		} else {
+			a.removeAttribute('ping');
+			a.href = a.href.replace(r, '');
+		}
+	};
+};
+
+const Types = {
+	search: Symbol('search'),
+	isch: Symbol('image'),
+	shop: Symbol('shop'),
+	nws: Symbol('news'),
+	vid: Symbol('video'),
+	bks: Symbol('book'),
+	maps: Symbol('maps'),
+	fin: Symbol('finance'),
+	toppage: Symbol('toppage'),
+	// flights: Symbol('flights'),
+};
+
+const tbmToType = tbm => {
+	if (tbm === null) {
+		return Types.search;
+	}
+	const t = {
+		isch: Types.isch,
+		shop: Types.shop,
+		nws: Types.nws,
+		vid: Types.vid,
+		bks: Types.bks,
+		fin: Types.fin,
+	}[tbm];
+	if (t === undefined) {
 		return null;
 	} else {
-		return results.pop() || 0;
+		return t;
 	}
-}
+};
 
-/* return search mode */
-function getSearchMode() {
-	const parameter = location.search + location.hash;
-	return getParam(parameter, 'tbm') || 'search';
-}
+const BadParamsBase = [
+	'biw', // offsetWidth
+	'bih', // offsetHeight
+	'ei',
+	'sa',
+	'ved',
+	'source',
+	'prds',
+	'bvm',
+	'bav',
+	'psi',
+	'stick',
+	'dq',
+	'ech',
+	'gs_gbg',
+	'gs_rn',
+	'cp',
+	'ictx',
+	'cshid',
+	'gs_lcp',
+];
 
-// matching tracking paramaters
-const badParametersNamesObj = {
-	base: [
-		'biw', // offsetWidth
-		'bih', // offsetHeight
-		'ei',
-		'sa',
-		'ved',
-		'source',
-		'prds',
-		'bvm',
-		'bav',
-		'psi',
-		'stick',
-		'dq',
-		'ech',
-		'gs_gbg',
-		'gs_rn',
-		'cp',
-		'ictx',
-		'cshid'
-	],
-	// image search
-	isch: [
-		'scroll',
-		'vet',
-		'yv',
-		'iact',
-		'forward',
-		'ndsp',
-		'csi',
-		'tbnid'
-		//'docid',   // related images
-		//'imgdii',  // related images
-	],
-	searchform: [
-		// search form
+const BadParams = (() => {
+	const o = {};
+	o[Types.search] = [
 		'pbx',
 		'dpr',
 		'pf',
@@ -94,529 +124,293 @@ const badParametersNamesObj = {
 		'oq',
 		'sclient',
 		'gs_l',
-		'aqs'
-		//'gs_ri',   // suggestions
-		//'gs_id',   // suggestions
-		//'xhr',     // suggestions at image search
-		//'tch',     // js flag?
-	],
-	// Google maps
-	maps: ['psi']
-};
+		'aqs',
+	];
+	o[Types.isch] = [
+		'scroll',
+		'vet',
+		'yv',
+		'iact',
+		'forward',
+		'ndsp',
+		'csi',
+		'tbnid',
+		'sclient',
+		'oq',
+	];
+	o[Types.shop] = ['oq'];
+	o[Types.nws] = ['oq'];
+	o[Types.vid] = ['oq'];
+	o[Types.bks] = ['oq'];
+	o[Types.fin] = ['oq'];
+	o[Types.toppage] = ['oq', 'sclient', 'uact'];
+	o[Types.maps] = ['psi'];
+	return o;
+})();
 
-// search option on first access
-const GoogleOp = {
-	maps: Symbol(),
-	isch: Symbol(),
-	search: Symbol(),
-	unknown: Symbol()
-};
-
-const op = (() => {
-	if (location.pathname.startsWith('/maps')) {
-		return GoogleOp.maps;
-	}
-	if (getSearchMode() === 'isch') {
-		return GoogleOp.isch;
+const searchFormUriuri = async arg => {
+	let form = null;
+	if (arg.pageType.mobileOld) {
+		form = $('#sf');
+	} else if (arg.pageType.ty === Types.isch) {
+		form = await waitUntilDeclare({
+			obj: window,
+			property: 'sf',
+			interval: 30,
+		});
 	} else {
-		return GoogleOp.search;
-	}
-})();
-
-const badParametersNames = (() => {
-	switch (op) {
-		case GoogleOp.maps:
-			return badParametersNamesObj.maps;
-		case GoogleOp.isch:
-			return badParametersNamesObj.base.concat(
-				badParametersNamesObj.searchform,
-				badParametersNamesObj.isch
-			);
-		case GoogleOp.search:
-			return badParametersNamesObj.base.concat(
-				badParametersNamesObj.searchform
-			);
-	}
-})();
-
-const badAttrNamesObj = {
-	default: ['onmousedown', 'ping', 'oncontextmenu'],
-	search: ['onmousedown', 'ping', 'oncontextmenu'],
-	vid: ['onmousedown'],
-	nws: ['onmousedown'],
-	bks: [],
-	isch: [],
-	shop: []
-};
-
-// From the nodes selected here, delete parameters specified by badParametersNames
-const dirtyLinkSelectors = [
-	// menu
-	'a.q.qs',
-
-	// doodle
-	'a.doodle',
-
-	// Upper left menu
-	'.gb_Z > a',
-
-	// Logo
-	'a#logo',
-	'div #logocont > a',
-	'div#qslc > a',
-	'header#hdr > div > a',
-
-	// search button?
-	'form#sf > a',
-
-	/// imagesearch
-	// colors
-	'div#sc-block > div > a',
-	// size
-	'a.hdtb-mitem'
-];
-
-const badPaths = ['imgevent', 'shopping\\/product\\/.*?\\/popout', 'async/ecr', 'async/bgasy'];
-
-/* Compile */
-// The first paramater is probably 'q' so '?' does not consider
-const regBadParameters = new RegExp(
-	'&(?:' + badParametersNames.join('|') + ')=.*?(?=(&|$))',
-	'g'
-);
-const regBadPaths = new RegExp('^/(?:' + badPaths.join('|') + ')');
-const dirtyLinkSelector = dirtyLinkSelectors
-	.map(s => s + ":not([href=''])")
-	.join(',');
-
-/* Return parameter value */
-function extractDirectLink(str, param) {
-	//(?<=q=)(.*)(?=&)/
-	const res = new RegExp(`[?&]${param}(=([^&#]*))`).exec(str);
-	if (!res || !res[2]) return '';
-	return decodeURIComponent(res[2]);
-}
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/* Return Promise when declared the variable name specified by argument */
-function onDeclare(obj, propertyStr, interval = 80) {
-	return new Promise(async function(resolve, reject) {
-		const propertyNames = propertyStr.split('.');
-		let currObj = obj;
-		for (const propertyName of propertyNames) {
-			while (!(propertyName in currObj) || currObj[propertyName] === null) {
-				await sleep(interval);
-			}
-			currObj = currObj[propertyName];
-		}
-		resolve(currObj);
-	});
-}
-
-function rewriteProperties(prop) {
-	for (const table of prop) {
-		//const targetObject = typeof table[0] === 'function' ? table[0]() : table[0];
-		Object.defineProperty(table[0] || {}, table[1], {
-			value: table[2],
-			writable: false
+		form = await waitUntilDeclare({
+			obj: window,
+			property: 'tsf',
+			interval: 30,
 		});
 	}
-}
 
-function load() {
-	console.time('LOAD');
-
-	/* Overwrite disturbing functions */
-	rewriteProperties([[window, 'rwt', yesman], [window.gbar_, 'Rm', yesman]]);
-
-	// do not send referrer
-	const noreferrerMeta = document.createElement('meta');
-	noreferrerMeta.setAttribute('name', 'referrer');
-	noreferrerMeta.setAttribute('content', 'no-referrer');
-	document.querySelector('head').appendChild(noreferrerMeta);
-
-	/*
-	 * Variables
-	 */
-	// Whether to use AJAX
-	const legacy = document.getElementById('cst') === null;
-
-	/* Nodes */
-	const nodeMain = document.getElementById('main');
-	const nodeCnt = document.getElementById('cnt');
-	const root = (() => {
-		if (legacy) {
-			return nodeCnt || nodeMain || window.document;
-		} else {
-			return nodeMain; // || nodeCnt;
-		}
-	})();
-
-	// Flag indicating whether the hard tab is loaded on 'DOMContentLoaded'
-	const lazy_hdtb = !legacy || root === nodeCnt;
-
-	// Define selector function
-	const $ = root.querySelector.bind(root);
-	const $$ = sel =>
-		Array.prototype.slice.call(root.querySelectorAll.call(root, [sel]));
-
-	// Selector pointing to anchors to purify
-	const dirtySelector = (() => {
-		if (root === window.document) {
-			return 'body a';
-		} else if (legacy) {
-			return `#${root.id} a`;
-		} else {
-			return '#rcnt a';
-		}
-	})();
-
-	// List of parameters to keep
-	const saveParamNames = [
-		'q',
-		'hl',
-		'num',
-		'tbm',
-		'tbs',
-		'lr',
-		'btnI',
-		'btnK',
-		'safe'
-	];
-	const obstacleInputsSelector =
-		'form[id*=sf] input' +
-		saveParamNames.map(s => ':not([name=' + s + '])').join('');
-
-	/*
-	 * Functions
-	 */
-	function removeFormInputs() {
-		for (const node of document.querySelectorAll(obstacleInputsSelector)) {
-			node.parentNode.removeChild(node);
-		}
-	}
-
-	function removeBadParameters() {
-		for (const dirtyLink of document.querySelectorAll(dirtyLinkSelector)) {
-			dirtyLink.href = dirtyLink.href.replace(regBadParameters, '');
-		}
-	}
-
-	const specProcesses = {
-		shop: function() {
-			// Overwrite links(desktop version only)
-			//Object.values(google.pmc.smpo.r).map(s=>{return {title:s[14][0],link:s[28][8]}})
-			if (legacy) return;
-			onDeclare(google, 'pmc.spop.r').then(shopObj => {
-				const _tempAnchors = $$("div[class$='__content'] a[jsaction='spop.c']");
-				const [shopAnchors, shopThumbnailAnchors] = [0, 1].map(m =>
-					_tempAnchors.filter((_, i) => i % 2 === m)
-				);
-				const shopArrays = Object.values(shopObj);
-				const shopLinks = shopArrays.map(a => a[34][6]);
-				const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
-
-				if (shopAnchors.length !== shopLinks.length) {
-					console.warn(
-						'length does not match',
-						shopAnchors.length,
-						shopLinks.length
-					);
-					return;
-				}
-
-				for (const detail of zip([
-					shopAnchors,
-					shopLinks,
-					shopThumbnailAnchors,
-					shopArrays
-				])) {
-					const [shopAnchor, shopLink, shopThumbnailAnchor, shopArray] = detail;
-
-					shopAnchor.href = shopThumbnailAnchor.href = shopLink;
-
-					// Disable click actions
-					//detail[0].__jsaction = null;
-					//detail[0].removeAttribute("jsaction");
-
-					// Overwrite variables used when link clicked
-					try {
-						shopArray[3][0][1] = shopLink;
-						shopArray[14][1] = shopLink;
-						shopArray[89][16] = shopLink;
-						shopArray[89][18][0] = shopLink;
-						shopArray[85][3] = shopLink;
-					} catch (e) {}
-				}
-				console.log('Links Rewrited');
-			});
-		}
-	};
-
-	function removeTracking() {
-		console.time('removeTracking');
-		const searchMode = getSearchMode();
-		const badAttrNames = badAttrNamesObj[searchMode]
-			? badAttrNamesObj[searchMode]
-			: badAttrNamesObj['default'];
-		const directLinkParamName = 'q';
-
-		// search result
-		for (const searchResult of $$(dirtySelector)) {
-			// remove attributes
-			for (const badAttrName of badAttrNames) {
-				searchResult.removeAttribute(badAttrName);
-			}
-
-			// hide referrer
-			searchResult.rel = 'noreferrer';
-
-			// remove google redirect link(legacy)
-			if (
-				searchResult.hasAttribute('href') &&
-				searchResult.getAttribute('href').startsWith('/url?')
-			) {
-				searchResult.href = extractDirectLink(
-					searchResult.href,
-					directLinkParamName
-				);
-			}
-			searchResult.href = searchResult.href.replace(regBadParameters, '');
-		}
-
-		removeBadParameters();
-
-		searchMode in specProcesses && specProcesses[searchMode]();
-
-		console.timeEnd('removeTracking');
-	}
-
-	const ObserveOp = {
-		LOADED: {
-			IMAGE: ['DIV', 'class', /.*irc_bg.*/],
-			HDTB: ['DIV', 'class', /^hdtb-mn-cont$/]
-		},
-		UPDATE: {
-			HDTB: ['DIV', 'class', /^hdtb-mn-cont$/]
-		},
-		CHANGE: {
-			HDTB: ['DIV', 'id', /^cnt$/],
-			PAGE: ['DIV', 'data-set', /.+/]
-		}
-	};
-
-	const ObserveUntilLoadedList = Object.values(ObserveOp.LOADED);
-
-	function startObserve(targetElement, op, func, conf = { childList: true }) {
-		if (targetElement === null) {
-			console.warn('targetElement is null', op, func);
-			return;
-		}
-		//console.log(op, 'Register To', targetElement);
-		const targetElementName = op[0];
-		const targetAttrName = op[1];
-		const targetAttrValueReg = op[2];
-		const filterFunc = n => {
-			return (
-				n.nodeName === targetElementName &&
-				targetAttrValueReg.test(n.getAttribute(targetAttrName))
-			);
-		};
-
-		// if targetElement already appeared
-		if (
-			ObserveUntilLoadedList.includes(op) &&
-			Array.prototype.slice
-				.call(targetElement.querySelectorAll(targetElementName))
-				.filter(filterFunc).length >= 1
-		) {
-			//console.log(op, 'Register To', targetElement);
-			func();
-			return;
-		}
-
-		new MutationObserver((mutations, observer) => {
-			const nodes = Array.prototype.concat
-				.apply([], mutations.map(s => Array.prototype.slice.call(s.addedNodes)))
-				//.map((s)=>{console.log(s);return s})
-				.filter(filterFunc);
-
-			if (nodes.length >= 1) {
-				//console.log(targetElement, op, 'Fired', nodes[0], func);
-				func();
-				if (ObserveUntilLoadedList.includes(op)) {
-					observer.disconnect();
-				}
-				//return startObserve;
-			}
-		}).observe(targetElement, conf);
-	}
-
-	function pageInit() {
-		removeTracking();
-		startObserve($('#search'), ObserveOp.CHANGE.PAGE, removeTracking);
-	}
-
-	const confDeepObserve = { childList: true, subtree: true };
-
-	const tsf = document.getElementById("tsf");
-	if(tsf === null){
-		console.warn("#tsf not found");
-	}else{
-		//tsf.addEventListener("submit", () => {
-		const _submit = tsf.submit.bind(tsf);
-		tsf.submit = () => {
-			const sel = "input " + badParametersNames.map(p => `[name=${p}]`).join(",");
-			for(const node of tsf.querySelectorAll(sel)){
-				node.parentNode.removeChild(node);
-			}
-			_submit();
-		};
-	}
-
-	// Wait for .hdtb-mn-cont appears in the first page access
-	if (lazy_hdtb && !legacy) {
-		startObserve(
-			root,
-			ObserveOp.LOADED.HDTB,
-			() => {
-				// hdtb loaded
-				switch (getSearchMode()) {
-					case 'isch': // Image Search
-						removeTracking();
-
-						// Remove unnecessary script from buttons
-						startObserve($('#isr_mc'), ObserveOp.LOADED.IMAGE, () => {
-							for (const node of $$('a[class*=irc_]')) {
-								node.__jsaction = null;
-								node.removeAttribute('jsaction');
-							}
-						});
-
-						// on search options updated
-						startObserve(
-							$('#top_nav'),
-							ObserveOp.UPDATE.HDTB,
-							removeBadParameters,
-							confDeepObserve
-						);
-						break;
-					default:
-						pageInit();
-						// Wait for #cnt inserted. In HDTB switching, since .hdtb-mn-cont does not appear
-						startObserve(root, ObserveOp.CHANGE.HDTB, pageInit);
-						break;
-				}
-				removeFormInputs();
-			},
-			confDeepObserve
-		);
-	} else if (legacy) {
-		removeTracking();
-
-		// Remove unnecessary parameters from hdtb
-		const hdtbRoot = $('#hdtbMenus');
-		if (hdtbRoot) {
-			startObserve(hdtbRoot, ObserveOp.LOADED.HDTB, removeBadParameters);
-		}
-
-		if (document.getElementById('hdr')) {
-			const stopAddParams = s => {
-				const src = s.srcElement;
-				if (src.nodeName === 'A' && src.href.match(/\/search.*[?&]tbm=isch/)) {
-					s.stopPropagation();
-				}
-			};
-			document.addEventListener('click', stopAddParams, true);
-			document.addEventListener('touchStart', stopAddParams, true);
-		}
-
-		// Remove unnecessary parameters from 'option'
-		for (const option of document.querySelectorAll('#mor > option')) {
-			option.value = option.value.replace(regBadParameters, '');
-		}
-
-		console.warn('legacy mode');
-		console.timeEnd('LOAD');
+	if (form === null) {
+		console.warn('form === null');
 		return;
 	}
 
-	console.timeEnd('LOAD');
-}
-
-function init() {
-	onDeclare(window, 'google', 20).then(() => {
-		rewriteProperties([
-			[google, 'log', yesman],
-			[google, 'logUrl', tired],
-			[google, 'getEI', yesman],
-			[google, 'getLEI', yesman],
-			[google, 'ctpacw', yesman],
-			[google, 'csiReport', yesman],
-			[google, 'report', yesman],
-			[google, 'aft', yesman],
-			[google, 'kEI', '0']
-		]);
-	});
-
-	// Reject Request by img tag
-	//maps:log204
-	const regBadImageSrc = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
-	Object.defineProperty(window.Image.prototype, 'src', {
-		set: function(url) {
-			if (!regBadImageSrc.test(url)) {
-				this.setAttribute('src', url);
-			}
+	for (const i of form) {
+		if (i.tagName !== 'INPUT') continue;
+		if (arg.badParams.includes(i.name)) {
+			i.parentElement.removeChild(i);
 		}
-	});
-
-	// Reject unknown parameters by script tag
-	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
-		set: function(url) {
-			this.setAttribute('src', url.replace(regBadParameters, ''));
-		}
-	});
-
-	// hook XHR
-	const origOpen = XMLHttpRequest.prototype.open;
-	window.XMLHttpRequest.prototype.open = function(act, path) {
-		if (!regBadPaths.test(path)) {
-			origOpen.apply(this, [act, path.replace(regBadParameters, '')]);
+	}
+	const orig = form.appendChild.bind(form);
+	form.appendChild = e => {
+		if (!arg.badParams.includes(e.name)) {
+			orig(e);
 		}
 	};
+};
 
-	// beacon
+const untrackAnchors = (untrack, arg) => {
+	return waitUntilDeclare({
+		obj: window,
+		property: arg.pageType.mobile
+			? 'topstuff'
+			: arg.pageType.mobileOld
+			? 'rmenu'
+			: 'search',
+		interval: 30,
+	}).then(_ => {
+		for (const a of $$('a')) {
+			untrack(a);
+		}
+	});
+
+};
+
+const gcommon = async arg => {
+	const untrack = untrackBuilder(arg);
+	const p1 = waitUntilDeclare({
+		obj: window,
+		property: 'google',
+		interval: 30,
+	}).then(google => {
+		rewriteProperties([
+			[google, 'log', yes],
+			[google, 'logUrl', doNothing],
+			[google, 'getLEI', yes],
+			[google, 'ctpacw', yes],
+			[google, 'csiReport', yes],
+			[google, 'report', yes],
+			[google, 'aft', yes],
+			//[google, 'kEI', '0'],
+			//[google, 'getEI', yes], or ()=>"0"
+		]);
+	});
+	rewriteProperties([
+		[window, 'rwt', doNothing],
+		[window.gbar_, 'Rm', doNothing],
+	]);
+
+	const p2 = untrackAnchors(untrack, arg);
+	const p3 = searchFormUriuri(arg);
+	await Promise.all([p1, p2, p3]);
+
+	if (arg.pageType.mobile) {
+		const sel =
+			arg.pageType.ty === Types.search
+				? '#bres + h1 + div > div + div'
+				: '#bres + div > div + div';
+		new MutationObserver(mutations => {
+			const nodes = [];
+			for (const m of mutations) {
+				nodes.push(...m.addedNodes);
+			}
+			for (const n of nodes) {
+				new MutationObserver((_, obs) => {
+					console.debug('untrack', n);
+					for (const a of $$('a', n)) {
+						untrack(a);
+					}
+					obs.disconnect();
+				}).observe(n, { childList: true });
+			}
+		}).observe($(sel), {
+			childList: true,
+		});
+	}
+};
+
+const fun = {};
+
+// TODO mobile, mobileOld
+fun[Types.toppage] = searchFormUriuri;
+
+fun[Types.search] = gcommon;
+fun[Types.vid] = gcommon;
+fun[Types.nws] = gcommon;
+fun[Types.bks] = gcommon;
+fun[Types.fin] = gcommon;
+
+fun[Types.isch] = async arg => {
+	// TODO desktop, mobile, mobileOld
+	const untrack = untrackBuilder(arg);
+	const p1 = waitUntilDeclare({
+		obj: window,
+		property: 'islmp',
+		interval: 30,
+	}).then(() => {
+		for (const a of $$('a')) {
+			untrack(a);
+		}
+	});
+	const p2 = searchFormUriuri(arg);
+	await Promise.all([p1, p2]);
+};
+
+fun[Types.shop] = async arg => {
+	// TODO mobile, mobileOld
+	const untrack = untrackBuilder(arg);
+	const p1 = waitUntilDeclare({
+		obj: window,
+		property: 'google.pmc.spop.r',
+		interval: 30,
+	}).then(shopObj => {
+		// Rewrite to original link
+		const tmp = $$("div[class$='__content'] a[jsaction='spop.c']");
+		const [anchors, thumbs] = [0, 1].map(m =>
+			tmp.filter((_, i) => i % 2 === m)
+		);
+		const shops = Object.values(shopObj);
+		const links = shops.map(a => a[34][6]);
+		if (anchors.length === links.length) {
+			for (const [anchor, link, thumb, shop] of zip([
+				anchors,
+				links,
+				thumbs,
+				shops,
+			])) {
+				anchors.href = thumb.href = link;
+				shop[3][0][1] = link;
+				shop[14][1] = link;
+				shop[89][16] = link;
+				shop[89][18][0] = link;
+				shop[85][3] = link;
+			}
+		} else {
+			console.warn('length does not match', anchors.length, links.length);
+		}
+	});
+
+	const p2 = untrackAnchors(untrack, arg);
+	const p3 = searchFormUriuri(arg);
+	await Promise.all([p1, p2, p3]);
+};
+// TODO fun[Types.maps] = async arg => {}
+
+(async () => {
+	'use strict';
+	console.debug('rgt: init');
+	console.time('rgt');
+
+	const ty = (() => {
+		if (location.pathname.startsWith('/maps')) {
+			return Types.maps;
+		}
+		if (location.pathname === '/' || location.pathname === '/webhp') {
+			return Types.toppage;
+		}
+		const tbm = new URLSearchParams(location.search).get('tbm');
+		if (location.pathname === '/search') {
+			return tbmToType(tbm);
+		}
+		return null;
+	})();
+
+	if (ty === null) {
+		console.debug('ty === null');
+		return;
+	}
+
+	const badParams = (() => {
+		return [...BadParamsBase, ...BadParams[ty]];
+	})();
+	const badParamsRegex = new RegExp(
+		'&(?:' + badParams.join('|') + ')=.*?(?=(&|$))',
+		'g'
+	);
+
+	const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
+	Object.defineProperty(window.Image.prototype, 'src', {
+		set: function(url) {
+			if (!badImageSrcRegex.test(url)) {
+				this.setAttribute('src', url);
+			}
+		},
+	});
+
+	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
+		set: function(url) {
+			this.setAttribute('src', url.replace(badParamsRegex, ''));
+		},
+	});
+
+	const badPaths = [
+		'imgevent',
+		'shopping\\/product\\/.*?\\/popout',
+		'async/ecr',
+		'async/bgasy',
+	];
+	const regBadPaths = new RegExp('^/(?:' + badPaths.join('|') + ')');
+	const origOpen = XMLHttpRequest.prototype.open;
+	window.XMLHttpRequest.prototype.open = function(act, path) {
+		if (path === undefined) return;
+		if (path.startsWith('https://aa.google.com/')) return;
+		if (path.startsWith('https://play.google.com/log')) return;
+		if (path.startsWith('https://www.google.com/log')) return;
+		if (regBadPaths.test(path)) return;
+		origOpen.apply(this, [act, path.replace(badParamsRegex, '')]);
+	};
+
 	if ('navigator' in window) {
 		const origSendBeacon = navigator.sendBeacon.bind(navigator);
 		navigator.sendBeacon = (path, data) => {
-			if (!regBadImageSrc.test(path)) {
-				origSendBeacon(path, data);
-			}
+			if (path.startsWith('https://play.google.com/log')) return;
+			if (badImageSrcRegex.test(path)) return;
+			origSendBeacon(path, data);
 		};
 	}
-}
 
-/* Execute */
-
-init();
-console.timeEnd('init');
-
-if (
-	location.pathname !== '/' &&
-	location.pathname !== '/search' &&
-	document.querySelector('html').getAttribute('itemtype') !==
-		'http://schema.org/SearchResultsPage'
-) {
-	console.warn('');
-	return;
-}
-
-window.addEventListener('DOMContentLoaded', load);
-
-// for older browser
-if (document.getElementById('universal') !== null) {
-	load();
-}
+	if (ty in fun) {
+		const mobileOld = $("html[itemtype]") === null; // &liteui=2
+		const mobile = !mobileOld && $('meta[name=viewport]') !== null;
+		const arg = {
+			pageType: {
+				ty,
+				mobile,
+				mobileOld,
+			},
+			badParams,
+			badParamsRegex,
+		};
+		console.debug('arg', arg);
+		await fun[ty](arg);
+	} else {
+		console.warn(`key not found in fun: ${ty.toString()}`);
+	}
+	console.timeEnd('rgt');
+})();
