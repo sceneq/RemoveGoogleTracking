@@ -20,23 +20,24 @@ const $$ = (s, n = document) => [...n.querySelectorAll(s)];
 const sleep = millis => new Promise(resolve => setTimeout(resolve, millis));
 const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
 
-const rewriteProperties = props => {
-	for (const p of props) {
-		Object.defineProperty(p[0] || {}, p[1], {
-			value: p[2],
+const rewriteProperties = arg => {
+	for (const [obj, prop, value] of arg) {
+		if (!obj) continue;
+		Object.defineProperty(obj, prop, {
+			value,
 			writable: false,
 		});
 	}
 };
 
-const waitUntilDeclare = (obj, property, { interval = 100 }) => {
+const waitUntilDeclare = (obj, property, option = { interval: 100 }) => {
 	console.debug('waitUntilDeclare', obj.toString(), property);
 	return new Promise(async (resolve, reject) => {
 		const propertyNames = property.split('.');
 		let currObj = obj;
 		for (const propertyName of propertyNames) {
 			while (!(propertyName in currObj) || currObj[propertyName] === null) {
-				await sleep(interval);
+				await sleep(option.interval);
 			}
 			currObj = currObj[propertyName];
 		}
@@ -45,13 +46,13 @@ const waitUntilDeclare = (obj, property, { interval = 100 }) => {
 	});
 };
 
-const waitUntilNode = (sel, { interval = 100 }) => {
+const waitUntilNode = (sel, option = { interval: 100 }) => {
 	console.debug('waitUntilNode', sel);
 	return new Promise(async (resolve, reject) => {
 		let d = null;
 		while (d === null) {
 			d = $(sel);
-			await sleep(interval);
+			await sleep(option.interval);
 		}
 		console.debug('waitUntilNode Done', sel);
 		resolve(d);
@@ -61,15 +62,26 @@ const waitUntilNode = (sel, { interval = 100 }) => {
 const untrackBuilder = arg => {
 	const r = arg.badParamsRegex;
 	return a => {
-		const href = a.getAttribute('href');
-		if (href === null) return;
-		if (href.startsWith('/url?')) {
-			a.href = new URLSearchParams(href.slice(5)).get('q');
+		const href = a?.href;
+		if (!href) return;
+		const url = new URL(href);
+		if (url.pathname === '/url') {
+			a.href = url.get('url'); // todo q?
 		} else {
 			a.removeAttribute('ping');
-			a.href = a.href.replace(r, '');
+			a.href = href.replace(r, '');
 		}
 	};
+};
+
+const delParams = (sUrl, params) => {
+	const url = new URL(sUrl);
+	const keys = [...url.searchParams.keys()];
+	for (const k of keys) {
+		if (!params.includes(k)) continue;
+		url.searchParams.delete(k);
+	}
+	return url.toString();
 };
 
 const Types = {
@@ -164,13 +176,14 @@ const BadParams = (() => {
 })();
 
 const searchFormUriuri = async arg => {
+	// TODO mobile, mobileOld
 	let form = null;
 	if (arg.pageType.mobileOld) {
 		form = $('#sf');
 	} else if (arg.pageType.ty === Types.isch) {
-		form = await waitUntilDeclare(window, 'sf', { interval: 30 });
+		form = await waitUntilDeclare(window, 'sf');
 	} else {
-		form = await waitUntilDeclare(window, 'tsf', { interval: 30 });
+		form = await waitUntilDeclare(window, 'tsf');
 	}
 
 	if (form === null) {
@@ -212,7 +225,7 @@ const untrackAnchors = (untrack, arg) => {
 		property = 'search';
 	}
 
-	return waitUntilDeclare(window, property, { interval: 20 }).then(_ => {
+	return waitUntilDeclare(window, property).then(_ => {
 		for (const a of $$('a')) {
 			untrack(a);
 		}
@@ -221,21 +234,19 @@ const untrackAnchors = (untrack, arg) => {
 
 const gcommon = async arg => {
 	const untrack = untrackBuilder(arg);
-	const p1 = waitUntilDeclare(window, 'google', { interval: 30 }).then(
-		google => {
-			rewriteProperties([
-				[google, 'log', yes],
-				[google, 'logUrl', doNothing],
-				[google, 'getLEI', yes],
-				[google, 'ctpacw', yes],
-				[google, 'csiReport', yes],
-				[google, 'report', yes],
-				[google, 'aft', yes],
-				//[google, 'kEI', '0'],
-				//[google, 'getEI', yes], or ()=>"0"
-			]);
-		}
-	);
+	const p1 = waitUntilDeclare(window, 'google').then(google => {
+		rewriteProperties([
+			[google, 'log', yes],
+			[google, 'logUrl', doNothing],
+			[google, 'getLEI', yes],
+			[google, 'ctpacw', yes],
+			[google, 'csiReport', yes],
+			[google, 'report', yes],
+			[google, 'aft', yes],
+			//[google, 'kEI', '0'],
+			//[google, 'getEI', yes], or ()=>"0"
+		]);
+	});
 	rewriteProperties([
 		[window, 'rwt', doNothing],
 		[window.gbar_, 'Rm', doNothing],
@@ -251,10 +262,7 @@ const gcommon = async arg => {
 				? '#bres + h1 + div > div + div'
 				: '#bres + div > div + div';
 		new MutationObserver(mutations => {
-			const nodes = [];
-			for (const m of mutations) {
-				nodes.push(...m.addedNodes);
-			}
+			const nodes = mutations.flatMap(d => [...d.addedNodes]);
 			for (const n of nodes) {
 				new MutationObserver((_, obs) => {
 					console.debug('untrack', n);
@@ -264,15 +272,12 @@ const gcommon = async arg => {
 					obs.disconnect();
 				}).observe(n, { childList: true });
 			}
-		}).observe($(sel), {
-			childList: true,
-		});
+		}).observe($(sel), { childList: true });
 	}
 };
 
 const fun = {};
 
-// TODO mobile, mobileOld
 fun[Types.toppage] = searchFormUriuri;
 
 fun[Types.search] = gcommon;
@@ -282,11 +287,58 @@ fun[Types.bks] = gcommon;
 fun[Types.fin] = gcommon;
 
 fun[Types.isch] = async arg => {
-	// TODO desktop, mobile, mobileOld
+	// TODO mobile, mobileOld
 	const untrack = untrackBuilder(arg);
 	const p1 = untrackAnchors(untrack, arg);
 	const p2 = searchFormUriuri(arg);
-	await Promise.all([p1, p2]);
+	const p3 = waitUntilDeclare(window, 'islrg').then(islrg => {
+		const imagesWrapper = islrg.children[0];
+		const uuuu = div => {
+			if (div.children.length !== 2) return;
+			const a = div.children[1];
+			untrack(a);
+			a.removeAttribute('jsaction');
+		};
+		for (const div of $$(':scope > div', imagesWrapper)) {
+			uuuu(div);
+		}
+		new MutationObserver(mutations => {
+			for (const div of mutations.flatMap(m => [...m.addedNodes])) {
+				uuuu(div);
+			}
+		}).observe(imagesWrapper, { childList: true });
+	});
+
+	/*
+	const p4 = waitUntilNode('.ZsbmCf').then(_ => {
+		for (const a of $$('.ZsbmCf, .Beeb4e')) {
+			const ee = e => untrack(a);
+			a.addEventListener('click', ee);
+			a.addEventListener('contextmenu', ee);
+		}
+	});
+	*/
+
+	/*
+	const safeurl = a => {
+		const s = a.j ?? a;
+		if (s.startsWith('/imgres?')) {
+			return delParams(location.origin + s, [
+				'vet',
+				'w',
+				'h',
+				'ved',
+				// q imgurl imgrefurl tbnid docid
+			]);
+		}
+		if (s.startsWith('/')) return s;
+		return new URLSearchParams(s).get('url') ?? s;
+	};
+	const p4 = waitUntilDeclare(window, 'default_VisualFrontendUi').then(_ => {
+		rewriteProperties([[_, 'zd', safeurl]]);
+	});
+	*/
+	await Promise.all([p1, p2, p3]);
 };
 
 fun[Types.shop] = async arg => {
@@ -297,10 +349,12 @@ fun[Types.shop] = async arg => {
 	const p3 = waitUntilDeclare(window, 'google.pmc.spop.r', {
 		interval: 30,
 	}).then(shopObj => {
-		for(const result of $$(".sh-dlr__list-result")){
+		for (const result of $$('.sh-dlr__list-result')) {
 			const shop = shopObj[result.dataset.docid];
 			const link = shop[34][6];
 			result.querySelector("a[class$='__merchant-name']").href = link;
+			result.querySelector('a.translate-content').href = link;
+			result.querySelector('div.sh-dlr__thumbnail > a').href = link;
 			shop[3][0][1] = link;
 			shop[14][1] = link;
 			shop[89][16] = link;
@@ -314,6 +368,7 @@ fun[Types.shop] = async arg => {
 };
 
 fun[Types.maps] = async arg => {
+	// TODO desktop, mobile, mobileOld
 	const untrack = a => {
 		a.addEventListener('click', e => e.stopPropagation());
 		for (const n of [...a.attributes]
@@ -325,9 +380,7 @@ fun[Types.maps] = async arg => {
 	const main = await waitUntilNode('div[role=main]', { interval: 30 });
 	new MutationObserver(mutations => {
 		console.log(mutations);
-	}).observe(main.children[1].children[0], {
-		childList: true,
-	});
+	}).observe(main.children[1].children[0], { childList: true });
 };
 
 (async () => {
@@ -350,7 +403,7 @@ fun[Types.maps] = async arg => {
 	})();
 
 	if (ty === null) {
-		console.debug('ty === null');
+		console.debug('ty === null', location.href);
 		return;
 	}
 
