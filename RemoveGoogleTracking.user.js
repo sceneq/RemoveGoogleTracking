@@ -290,38 +290,24 @@ fun[Types.isch] = async arg => {
 };
 
 fun[Types.shop] = async arg => {
-	// TODO mobile, mobileOld
+	// TODO desktop, mobile, mobileOld
 	const untrack = untrackBuilder(arg);
 	const p1 = untrackAnchors(untrack, arg);
 	const p2 = searchFormUriuri(arg);
 	const p3 = waitUntilDeclare(window, 'google.pmc.spop.r', {
 		interval: 30,
 	}).then(shopObj => {
-		// Rewrite to original link
-		const tmp = $$("div[class$='__content'] a[jsaction='spop.c']");
-		const [anchors, thumbs] = [0, 1].map(m =>
-			tmp.filter((_, i) => i % 2 === m)
-		);
-		const shops = Object.values(shopObj);
-		const links = shops.map(a => a[34][6]);
-		if (anchors.length === links.length) {
-			for (const [anchor, link, thumb, shop] of zip([
-				anchors,
-				links,
-				thumbs,
-				shops,
-			])) {
-				anchors.href = thumb.href = link;
-				shop[3][0][1] = link;
-				shop[14][1] = link;
-				shop[89][16] = link;
-				shop[89][18][0] = link;
-				if (shop[85] !== null) {
-					shop[85][3] = link;
-				}
+		for(const result of $$(".sh-dlr__list-result")){
+			const shop = shopObj[result.dataset.docid];
+			const link = shop[34][6];
+			result.querySelector("a[class$='__merchant-name']").href = link;
+			shop[3][0][1] = link;
+			shop[14][1] = link;
+			shop[89][16] = link;
+			shop[89][18][0] = link;
+			if (shop[85] !== null) {
+				shop[85][3] = link;
 			}
-		} else {
-			console.warn('length does not match', anchors.length, links.length);
 		}
 	});
 	await Promise.all([p1, p2, p3]);
