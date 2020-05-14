@@ -17,10 +17,10 @@ const yes = () => true;
 const doNothing = () => {};
 const $ = (s, n = document) => n.querySelector(s);
 const $$ = (s, n = document) => [...n.querySelectorAll(s)];
-const sleep = millis => new Promise(resolve => setTimeout(resolve, millis));
-const zip = rows => rows[0].map((_, c) => rows.map(row => row[c]));
+const sleep = (millis) => new Promise((resolve) => setTimeout(resolve, millis));
+const zip = (rows) => rows[0].map((_, c) => rows.map((row) => row[c]));
 
-const rewriteProperties = arg => {
+const rewriteProperties = (arg) => {
 	for (const [obj, prop, value] of arg) {
 		if (!obj) continue;
 		Object.defineProperty(obj, prop, {
@@ -31,7 +31,7 @@ const rewriteProperties = arg => {
 };
 
 const waitUntilDeclare = (obj, property, option = { interval: 100 }) => {
-	console.debug('waitUntilDeclare', obj.toString(), property);
+	console.debug('waitUntilDeclare Start', obj.toString(), property);
 	return new Promise(async (resolve, reject) => {
 		const propertyNames = property.split('.');
 		let currObj = obj;
@@ -41,13 +41,13 @@ const waitUntilDeclare = (obj, property, option = { interval: 100 }) => {
 			}
 			currObj = currObj[propertyName];
 		}
-		console.debug('waitUntilDeclare', obj.toString(), property, 'Done');
+		console.debug('waitUntilDeclare Done', obj.toString(), property);
 		resolve(currObj);
 	});
 };
 
 const waitUntilNode = (sel, option = { interval: 100 }) => {
-	console.debug('waitUntilNode', sel);
+	console.debug('waitUntilNode Start', sel);
 	return new Promise(async (resolve, reject) => {
 		let d = null;
 		while (d === null) {
@@ -59,22 +59,25 @@ const waitUntilNode = (sel, option = { interval: 100 }) => {
 	});
 };
 
-const untrackBuilder = arg => {
-	const r = arg.badParamsRegex;
-	return a => {
+const untrackBuilder = (arg) => {
+	const badParams = arg.badParams;
+	return (a) => {
 		const href = a?.href;
 		if (!href) return;
 		const url = new URL(href);
-		if (url.pathname === '/url') {
-			a.href = url.get('url'); // todo q?
+		if (url.getAttribute("href") === '/url') {
+			a.href = url.searchParams.get('url'); // todo q?
 		} else {
 			a.removeAttribute('ping');
-			a.href = href.replace(r, '');
+			a.href = delParams(href, badParams);
 		}
 	};
 };
 
 const delParams = (sUrl, params) => {
+	if (sUrl.startsWith('/')) {
+		sUrl = location.origin + sUrl;
+	}
 	const url = new URL(sUrl);
 	const keys = [...url.searchParams.keys()];
 	for (const k of keys) {
@@ -97,7 +100,7 @@ const Types = {
 	// flights: Symbol('flights'),
 };
 
-const tbmToType = tbm => {
+const tbmToType = (tbm) => {
 	if (tbm === null) {
 		return Types.search;
 	}
@@ -141,6 +144,7 @@ const BadParamsBase = [
 const BadParams = (() => {
 	const o = {};
 	o[Types.search] = [
+		'vet',
 		'pbx',
 		'dpr',
 		'pf',
@@ -154,8 +158,8 @@ const BadParams = (() => {
 		'aqs',
 	];
 	o[Types.isch] = [
-		'scroll',
 		'vet',
+		'scroll',
 		'yv',
 		'iact',
 		'forward',
@@ -175,7 +179,55 @@ const BadParams = (() => {
 	return o;
 })();
 
-const searchFormUriuri = async arg => {
+const overwrite = (arg) => {
+	const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
+	Object.defineProperty(window.Image.prototype, 'src', {
+		set: function (url) {
+			if (badImageSrcRegex.test(url)) return;
+			//console.debug('img send', url);
+			this.setAttribute('src', url);
+		},
+	});
+
+	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
+		set: function (url) {
+			//console.debug('script send', url);
+			this.setAttribute('src', delParams(url, arg.badParams));
+		},
+	});
+
+	const badPaths = [
+		'imgevent',
+		'shopping\\/product\\/.*?\\/popout',
+		'async/ecr',
+		'async/bgasy',
+	];
+	const regBadPaths = new RegExp('^/(?:' + badPaths.join('|') + ')');
+	const origOpen = XMLHttpRequest.prototype.open;
+	window.XMLHttpRequest.prototype.open = function (act, path) {
+		if (path === undefined) return;
+		if (path.startsWith('https://aa.google.com/')) return;
+		if (path.startsWith('https://play.google.com/log')) return;
+		if (path.startsWith('https://www.google.com/log')) return;
+		if (regBadPaths.test(path)) return;
+		const path2 = delParams(path, arg.badParams);
+		//console.debug('xhr send', act, path, path2);
+		origOpen.apply(this, [act, path2]);
+	};
+
+	if ('navigator' in window) {
+		const origSendBeacon = navigator.sendBeacon.bind(navigator);
+		navigator.sendBeacon = (path, data) => {
+			if (path === undefined) return;
+			if (path.startsWith('https://play.google.com/log')) return;
+			if (badImageSrcRegex.test(path)) return;
+			//console.debug('nav send', path);
+			origSendBeacon(path, data);
+		};
+	}
+};
+
+const searchFormUriuri = async (arg) => {
 	// TODO mobile, mobileOld
 	let form = null;
 	if (arg.pageType.mobileOld) {
@@ -198,7 +250,7 @@ const searchFormUriuri = async arg => {
 		}
 	}
 	const orig = form.appendChild.bind(form);
-	form.appendChild = e => {
+	form.appendChild = (e) => {
 		if (!arg.badParams.includes(e.name)) {
 			orig(e);
 		}
@@ -225,16 +277,16 @@ const untrackAnchors = (untrack, arg) => {
 		property = 'search';
 	}
 
-	return waitUntilDeclare(window, property).then(_ => {
+	return waitUntilDeclare(window, property).then((_) => {
 		for (const a of $$('a')) {
 			untrack(a);
 		}
 	});
 };
 
-const gcommon = async arg => {
+const gcommon = async (arg) => {
 	const untrack = untrackBuilder(arg);
-	const p1 = waitUntilDeclare(window, 'google').then(google => {
+	const p1 = waitUntilDeclare(window, 'google').then((google) => {
 		rewriteProperties([
 			[google, 'log', yes],
 			[google, 'logUrl', doNothing],
@@ -261,8 +313,8 @@ const gcommon = async arg => {
 			arg.pageType.ty === Types.search
 				? '#bres + h1 + div > div + div'
 				: '#bres + div > div + div';
-		new MutationObserver(mutations => {
-			const nodes = mutations.flatMap(d => [...d.addedNodes]);
+		new MutationObserver((mutations) => {
+			const nodes = mutations.flatMap((d) => [...d.addedNodes]);
 			for (const n of nodes) {
 				new MutationObserver((_, obs) => {
 					console.debug('untrack', n);
@@ -286,14 +338,14 @@ fun[Types.nws] = gcommon;
 fun[Types.bks] = gcommon;
 fun[Types.fin] = gcommon;
 
-fun[Types.isch] = async arg => {
+fun[Types.isch] = async (arg) => {
 	// TODO mobile, mobileOld
 	const untrack = untrackBuilder(arg);
 	const p1 = untrackAnchors(untrack, arg);
 	const p2 = searchFormUriuri(arg);
-	const p3 = waitUntilDeclare(window, 'islrg').then(islrg => {
+	const p3 = waitUntilDeclare(window, 'islrg').then((islrg) => {
 		const imagesWrapper = islrg.children[0];
-		const uuuu = div => {
+		const uuuu = (div) => {
 			if (div.children.length !== 2) return;
 			const a = div.children[1];
 			untrack(a);
@@ -302,8 +354,8 @@ fun[Types.isch] = async arg => {
 		for (const div of $$(':scope > div', imagesWrapper)) {
 			uuuu(div);
 		}
-		new MutationObserver(mutations => {
-			for (const div of mutations.flatMap(m => [...m.addedNodes])) {
+		new MutationObserver((mutations) => {
+			for (const div of mutations.flatMap((m) => [...m.addedNodes])) {
 				uuuu(div);
 			}
 		}).observe(imagesWrapper, { childList: true });
@@ -341,14 +393,14 @@ fun[Types.isch] = async arg => {
 	await Promise.all([p1, p2, p3]);
 };
 
-fun[Types.shop] = async arg => {
+fun[Types.shop] = async (arg) => {
 	// TODO desktop, mobile, mobileOld
 	const untrack = untrackBuilder(arg);
 	const p1 = untrackAnchors(untrack, arg);
 	const p2 = searchFormUriuri(arg);
 	const p3 = waitUntilDeclare(window, 'google.pmc.spop.r', {
 		interval: 30,
-	}).then(shopObj => {
+	}).then((shopObj) => {
 		for (const result of $$('.sh-dlr__list-result')) {
 			const shop = shopObj[result.dataset.docid];
 			const link = shop[34][6];
@@ -367,18 +419,18 @@ fun[Types.shop] = async arg => {
 	await Promise.all([p1, p2, p3]);
 };
 
-fun[Types.maps] = async arg => {
+fun[Types.maps] = async (arg) => {
 	// TODO desktop, mobile, mobileOld
-	const untrack = a => {
-		a.addEventListener('click', e => e.stopPropagation());
+	const untrack = (a) => {
+		a.addEventListener('click', (e) => e.stopPropagation());
 		for (const n of [...a.attributes]
-			.map(at => at.name)
-			.filter(n => ['href', 'class'].indexOf(n) === -1)) {
+			.map((at) => at.name)
+			.filter((n) => ['href', 'class'].indexOf(n) === -1)) {
 			a.removeAttribute(n);
 		}
 	};
 	const main = await waitUntilNode('div[role=main]', { interval: 30 });
-	new MutationObserver(mutations => {
+	new MutationObserver((mutations) => {
 		console.log(mutations);
 	}).observe(main.children[1].children[0], { childList: true });
 };
@@ -410,55 +462,6 @@ fun[Types.maps] = async arg => {
 	const badParams = (() => {
 		return [...BadParamsBase, ...BadParams[ty]];
 	})();
-	const badParamsRegex = new RegExp(
-		'&(?:' + badParams.join('|') + ')=.*?(?=(&|$))',
-		'g'
-	);
-
-	const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
-	Object.defineProperty(window.Image.prototype, 'src', {
-		set: function(url) {
-			if (badImageSrcRegex.test(url)) return;
-			//console.debug('img send', url);
-			this.setAttribute('src', url);
-		},
-	});
-
-	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
-		set: function(url) {
-			//console.debug('script send', url);
-			this.setAttribute('src', url.replace(badParamsRegex, ''));
-		},
-	});
-
-	const badPaths = [
-		'imgevent',
-		'shopping\\/product\\/.*?\\/popout',
-		'async/ecr',
-		'async/bgasy',
-	];
-	const regBadPaths = new RegExp('^/(?:' + badPaths.join('|') + ')');
-	const origOpen = XMLHttpRequest.prototype.open;
-	window.XMLHttpRequest.prototype.open = function(act, path) {
-		if (path === undefined) return;
-		if (path.startsWith('https://aa.google.com/')) return;
-		if (path.startsWith('https://play.google.com/log')) return;
-		if (path.startsWith('https://www.google.com/log')) return;
-		if (regBadPaths.test(path)) return;
-		//console.debug('xhr send', act, path);
-		origOpen.apply(this, [act, path.replace(badParamsRegex, '')]);
-	};
-
-	if ('navigator' in window) {
-		const origSendBeacon = navigator.sendBeacon.bind(navigator);
-		navigator.sendBeacon = (path, data) => {
-			if (path === undefined) return;
-			if (path.startsWith('https://play.google.com/log')) return;
-			if (badImageSrcRegex.test(path)) return;
-			//console.debug('nav send', path);
-			origSendBeacon(path, data);
-		};
-	}
 
 	if (ty in fun) {
 		const mobileOld = $('html[itemtype]') === null; // &liteui=2
@@ -470,9 +473,9 @@ fun[Types.maps] = async arg => {
 				mobileOld,
 			},
 			badParams,
-			badParamsRegex,
 		};
 		console.debug('arg', arg);
+		overwrite(arg);
 		await fun[ty](arg);
 	} else {
 		console.warn(`key not found in fun: ${ty.toString()}`);
