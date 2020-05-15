@@ -65,7 +65,7 @@ const untrackBuilder = (arg) => {
 		const href = a?.href;
 		if (!href) return;
 		const url = new URL(href);
-		if (url.getAttribute("href") === '/url') {
+		if (a.getAttribute("href") === '/url') {
 			a.href = url.searchParams.get('url'); // todo q?
 		} else {
 			a.removeAttribute('ping');
