@@ -156,6 +156,7 @@ const BadParams = (() => {
 		'sclient',
 		'gs_l',
 		'aqs',
+		'sxsrf',
 	];
 	o[Types.isch] = [
 		'vet',
