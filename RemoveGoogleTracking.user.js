@@ -3,7 +3,7 @@
 // @name           remove google tracking UWAA
 // @description    remove google tracking
 // @homepageURL    https://github.com/sceneq/RemoveGoogleTracking
-// @version        0.20
+// @version        0.21
 // @include        https://www.google.*/*
 // @grant          none
 // @run-at         document-body
@@ -65,7 +65,7 @@ const untrackBuilder = (arg) => {
 		const href = a?.href;
 		if (!href) return;
 		const url = new URL(href);
-		if (a.getAttribute("href") === '/url') {
+		if (a.getAttribute('href') === '/url') {
 			a.href = url.searchParams.get('url'); // todo q?
 		} else {
 			a.removeAttribute('ping');
@@ -197,23 +197,62 @@ const overwrite = (arg) => {
 		},
 	});
 
-	const badPaths = [
-		'imgevent',
-		'shopping\\/product\\/.*?\\/popout',
-		'async/ecr',
-		'async/bgasy',
+	const blockOnOpenPaths = [
+		'/imgevent',
+		'/async/ecr',
+		'/async/bgasy',
+		'/shopping/product/.+?/popout',
+		'/_/VisualFrontendUi/browserinfo',
+		'/_/VisualFrontendUi/jserror',
 	];
-	const regBadPaths = new RegExp('^/(?:' + badPaths.join('|') + ')');
-	const origOpen = XMLHttpRequest.prototype.open;
+
+	// todo fakeXHR?
+	const blockOnSendPaths = ['/log'];
+
+	const regBlockOnOpenPaths = new RegExp(
+		'^(?:' + blockOnOpenPaths.join('|') + ')'
+	);
+	const regBlockOnSendPaths = new RegExp(
+		'^(?:' + blockOnSendPaths.join('|') + ')'
+	);
+
+	const origOpen = window.XMLHttpRequest.prototype.open;
 	window.XMLHttpRequest.prototype.open = function (act, path) {
-		if (path === undefined) return;
-		if (path.startsWith('https://aa.google.com/')) return;
-		if (path.startsWith('https://play.google.com/log')) return;
-		if (path.startsWith('https://www.google.com/log')) return;
-		if (regBadPaths.test(path)) return;
-		const path2 = delParams(path, arg.badParams);
-		//console.debug('xhr send', act, path, path2);
-		origOpen.apply(this, [act, path2]);
+		try {
+			this.__path = path;
+			this.__url = null;
+			if (path === undefined) return;
+			if (path.startsWith('https://')) {
+				const url = new URL(path);
+				this.__url = url;
+				if (this.__url.origin === 'aa.google.com') return;
+				if (regBlockOnOpenPaths.test(this.__url.pathname)) return;
+			} else if (regBlockOnOpenPaths.test(this.__path)) {
+				return;
+			}
+			const new_path = delParams(path, arg.badParams);
+		} catch (e) {
+			console.error(e);
+			return;
+		}
+		console.debug('xhr open', this.__path);
+		return origOpen.apply(this, [act, this.__path]);
+	};
+
+	const origSend = window.XMLHttpRequest.prototype.send;
+	window.XMLHttpRequest.prototype.send = function (body) {
+		try {
+			if (this.__url !== null) {
+				if (regBlockOnSendPaths.test(this.__url.pathname)) return;
+			} else if (regBlockOnOpenPaths.test(this.__path)) {
+				return;
+			}
+		} catch (e) {
+			console.error(e);
+			return;
+		}
+		console.debug('xhr send', this.__path);
+		return origSend.apply(this, [body]);
 	};
 
 	if ('navigator' in window) {
