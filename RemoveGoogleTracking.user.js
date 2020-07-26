@@ -193,7 +193,11 @@ const overwrite = (arg) => {
 	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
 		set: function (url) {
 			//console.debug('script send', url);
-			this.setAttribute('src', delParams(url, arg.badParams));
+			if(typeof(url) === "string"){
+				this.setAttribute('src', delParams(url, arg.badParams));
+			} else {
+				this.setAttribute('src', url);
+			}
 		},
 	});
 
