@@ -181,14 +181,16 @@ const BadParams = (() => {
 })();
 
 const overwrite = (arg) => {
-	const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
-	Object.defineProperty(window.Image.prototype, 'src', {
-		set: function (url) {
-			if (badImageSrcRegex.test(url)) return;
-			//console.debug('img send', url);
-			this.setAttribute('src', url);
-		},
-	});
+	if(arg.pageType.ty !== Types.maps){
+		const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
+		Object.defineProperty(window.Image.prototype, 'src', {
+			set: function (url) {
+				console.debug('img send', url);
+				if (badImageSrcRegex.test(url)) return;
+				this.setAttribute('src', url);
+			},
+		});
+	}
 
 	Object.defineProperty(window.HTMLScriptElement.prototype, 'src', {
 		set: function (url) {
