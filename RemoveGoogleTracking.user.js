@@ -181,11 +181,11 @@ const BadParams = (() => {
 })();
 
 const overwrite = (arg) => {
+	const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
 	if(arg.pageType.ty !== Types.maps){
-		const badImageSrcRegex = /\/(?:(?:gen(?:erate)?|client|fp)_|log)204|(?:metric|csi)\.gstatic\.|(?:adservice)\.(google)/;
 		Object.defineProperty(window.Image.prototype, 'src', {
 			set: function (url) {
-				console.debug('img send', url);
+				//console.debug('img send', url);
 				if (badImageSrcRegex.test(url)) return;
 				this.setAttribute('src', url);
 			},
@@ -241,7 +241,7 @@ const overwrite = (arg) => {
 			console.error(e);
 			return;
 		}
-		console.debug('xhr open', this.__path);
+		//console.debug('xhr open', this.__path);
 		return origOpen.apply(this, [act, this.__path]);
 	};
 
@@ -257,7 +257,7 @@ const overwrite = (arg) => {
 			console.error(e);
 			return;
 		}
-		console.debug('xhr send', this.__path);
+		//console.debug('xhr send', this.__path);
 		return origSend.apply(this, [body]);
 	};
 
@@ -310,13 +310,13 @@ const untrackAnchors = (untrack, arg) => {
 	} else if (arg.pageType.mobileOld) {
 		property = 'main'; // 'rmenu';
 	} else if (arg.pageType.ty === Types.search) {
-		property = 'li_';
+		property = 'hdtb-msb-vis';
 	} else if (arg.pageType.ty === Types.bks) {
 		property = 'lr_';
 	} else if (arg.pageType.ty === Types.vid) {
-		property = 'ow6';
+		property = 'hdtb-msb-vis';
 	} else if (arg.pageType.ty === Types.nws) {
-		property = 'ow8';
+		property = 'hdtb-msb-vis';
 	} else if (arg.pageType.ty === Types.isch) {
 		property = 'i4';
 	} else {
