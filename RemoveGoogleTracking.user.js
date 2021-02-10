@@ -310,13 +310,13 @@ const untrackAnchors = (untrack, arg) => {
 	} else if (arg.pageType.mobileOld) {
 		property = 'main'; // 'rmenu';
 	} else if (arg.pageType.ty === Types.search) {
-		property = 'hdtb-msb-vis';
+		property = 'hdtb-msb';
 	} else if (arg.pageType.ty === Types.bks) {
 		property = 'lr_';
 	} else if (arg.pageType.ty === Types.vid) {
-		property = 'hdtb-msb-vis';
+		property = 'hdtb-msb';
 	} else if (arg.pageType.ty === Types.nws) {
-		property = 'hdtb-msb-vis';
+		property = 'hdtb-msb';
 	} else if (arg.pageType.ty === Types.isch) {
 		property = 'i4';
 	} else {
